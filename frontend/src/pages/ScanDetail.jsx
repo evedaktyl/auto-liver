@@ -24,7 +24,7 @@ export default function ScanDetail() {
                 <h2>{scan.filename}</h2>
                 <p><strong>Scan type: </strong>{scan.scan_type}</p>
                 <p><strong>Segmented: </strong>{scan.segmented ? "✅ Yes" : "❌ No"}</p>
-                <p><strong>Path:</strong> {scan.filepath}</p>
+                <p><strong>Path:</strong> {scan.path}</p>
             </div>
         </div>
     )

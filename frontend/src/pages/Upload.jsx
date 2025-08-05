@@ -4,6 +4,27 @@ export default function Upload() {
     const [scanType, setScanType] = useState("MRI")
     const [status, setStatus] = useState("")
 
+    const handleSubmit = async () => {
+        if (!file) return;
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("scan_type", scanType);
+
+        try {
+            const res = await fetch("http://localhost:8000/scans/", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error("Upload failed");
+
+            const data = await res.json();
+            console.log("Uploaded:", data);
+        } catch (err) {
+            console.error(err);
+            setStatus("Upload failed");
+        }
+    }
     return (
         <div className="min-h-screen flex items-center justify-center">
             <div className="p-8 bg-white rounded shadow max-w-md w-full">
@@ -54,6 +75,15 @@ export default function Upload() {
                     <option value="MRI">MRI</option>
                     <option value="CT">CT</option>
                 </select>
+
+                {file && (
+                    <button
+                        onClick={handleSubmit}
+                        className="w-full mt-2 px-4 py-2 text-white rounded">
+                        Submit
+                    </button>
+                )
+                }
             </div>
         </div>
     );
