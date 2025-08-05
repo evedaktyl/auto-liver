@@ -1,23 +1,41 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse
 from pathlib import Path
-import shutil
 from typing import List
-from models.scan import Scan
+from app.models.scan import Scan
+import os
 
-from services.id_generator import get_next_scan_id
-from services.file_handler import save_scan, get_scans
-from services.segment import segment
+from app.services.id_generator import get_next_scan_id
+from app.services.file_handler import save_to_temp, is_valid_file, save_scan
+from app.services.segment import segment
 
 router = APIRouter()
 
 scan_metadata = {}
+scan_metadata[6] = {
+    "scan_id": 6,
+    "filename": "test.nii.gz",
+    "path": "data/1/test.nii.gz",
+    "scan_type": "MRI",
+    "segmented": False
+}
 
-@router.post("/upload")
+@router.post("/")
 async def upload_scan(
     file: UploadFile = File(...),
     scan_type: str = Form(...),
 ):
+    """
+    To do: accept multiple dicom files/dicom directory
+    """
+    temp_path = save_to_temp(file)
+    file.file.seek(0)
+
+    if not is_valid_file(temp_path):
+        print(f"Invalid file: {temp_path}")
+        os.remove(temp_path)
+        raise HTTPException(status_code=400, detail="Invalid file type.")
+    
     try: 
         scan_id, path = save_scan(file)
     except Exception as e:
@@ -32,18 +50,18 @@ async def upload_scan(
     }
     return JSONResponse({"message": "Scan uploaded.", "scan_id": scan_id})
 
-@router.get("/scans", response_model=List[Scan])
+@router.get("/", response_model=List[Scan])
 def list_scans():
     return list(scan_metadata.values())
 
-@router.get("/scans/{scan_id}", response_model=Scan)
+@router.get("/{scan_id}", response_model=Scan)
 def get_scan(scan_id: int):
     if scan_id not in scan_metadata:
         raise HTTPException(status_code=404, detail="Scan not found")
     
     return scan_metadata[scan_id]
 
-@router.post("/scan/{scan_id}/segment")
+@router.post("/{scan_id}/segment")
 def segment_scan(scan_id: int):
     if scan_id not in scan_metadata:
         raise HTTPException(status_code=404, detail="Scan not found.")

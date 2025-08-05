@@ -2,7 +2,7 @@ from pathlib import Path
 import threading
 
 COUNTER_PATH = Path("data/scan_id_counter.txt")
-COUNTER_LOCK = threading.lock()
+COUNTER_LOCK = threading.Lock()
 
 def get_next_scan_id() -> int:
     with COUNTER_LOCK:

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes_scans import router as scans_router
+from app.api.routes_scans import router as scans_router
 
 app = FastAPI(
     title="Auto Liver Segmentation",
