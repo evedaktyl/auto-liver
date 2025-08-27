@@ -4,7 +4,7 @@ import tempfile
 import shutil
 import numpy as np
 
-def segment(filepath: Path, scan_type: str = "CT") -> Path:
+def segment(filepath: Path, scan_type: str = "CT", output_path: str = "") -> Path:
     """
     Runs TotalSegmentator on the scan and saves the liver mask
     in the same directory.
@@ -33,6 +33,6 @@ def segment(filepath: Path, scan_type: str = "CT") -> Path:
         raise RuntimeError("Liver mask was not found.")
     
     destination_path = filepath.parent / "mask.nii.gz"
-    shutil.copy(liver_mask_path, destination_path)
+    shutil.copy(liver_mask_path, output_path)
 
-    return destination_path
+    return output_path
