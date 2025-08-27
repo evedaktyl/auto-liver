@@ -1,6 +1,16 @@
 import { useEffect, useRef, useImperativeHandle } from "react";
 
-export default function MaskCanvas({ blob, width, height, opacity=0.35, mode="brush", size=5, editable=false, ref }) {
+export default function MaskCanvas({ 
+  blob, 
+  width, 
+  height, 
+  opacity=0.35, 
+  mode="brush", 
+  size=5, 
+  editable=false, 
+  ref, 
+  onUpdate
+}) {
   const canvasRef = useRef(null);
   const drawingRef = useRef(null);
 
@@ -38,7 +48,14 @@ export default function MaskCanvas({ blob, width, height, opacity=0.35, mode="br
     const ctx = cv.getContext("2d");
 
     const start = () => (drawingRef.current = true);
-    const stop = () => (drawingRef.current = false);
+    const stop = () => {
+      if (drawingRef.current) {
+        drawingRef.current = false;
+        cv.toBlob((b) => {
+          if (b && onUpdate) onUpdate(b);
+        });
+      }
+    };
     const move = (e) => {
       if (!drawingRef.current) return;
       const rect = cv.getBoundingClientRect();
@@ -71,7 +88,7 @@ export default function MaskCanvas({ blob, width, height, opacity=0.35, mode="br
       cv.removeEventListener("mouseout", stop);
       cv.removeEventListener("mousemove", move);
     };
-  }, [mode, size, editable]);
+  }, [blob, mode, size, editable]);
 
   return <canvas ref={canvasRef} width={width} height={height} style={{ width: "100%", height: "100%", opacity: opacity}}
 />
