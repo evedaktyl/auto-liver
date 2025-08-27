@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes_scans import router as scans_router
+from app.api.routes.routes_scans import router as scans_router
+from app.api.routes.routes_uploads import router as uploads_router
+from app.api.routes.routes_drafts import router as drafts_router
+
 
 app = FastAPI(
     title="Auto Liver Segmentation",
@@ -17,4 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(scans_router, prefix="/scans", tags=["Scans"])
+app.include_router(scans_router)
+app.include_router(uploads_router)
+app.include_router(drafts_router)
