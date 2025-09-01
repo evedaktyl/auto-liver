@@ -1,5 +1,29 @@
 import { useEffect, useRef, useImperativeHandle } from "react";
 
+/**
+ * MaskCanvas displays and allows editing of a segmentation mask.
+ * 
+ * Key refs:
+ * - canvasRef: points to the actual <canvas> DOM element (stores mask pixes).
+ * - drawingRef: a mutable flag to track if the mouse is currently down.
+ * 
+ * Props
+ * @param {Blob} blob - PNG image of the mask from backend.
+ * @param {number} width - Desired canvas width in pixels, falls back to blob width.
+ * @param {number} height - Desired canvas height in pixels, falls back to blob height.
+ * @param {number} opacity - Opacity at which mask is drawn. 
+ * @param {"brush"|"erase"} mode - Brush mode.
+ * @param {number} size - Radius of brush circle in pixels.
+ * @param {boolean} editable - If true, enables painting/erasing with the mouse. 
+ * @param {React.Ref} ref - Exposes helper methods (`getPNG`, `clear`) to parent.
+ * @param {function} onUpdate - Callback(blob) fired after edits. 
+ * 
+ * Usage:
+ * - Render <MaskCanvas> on top of a scan canvas. 
+ * - Allow edits for drafts, only on axial slices, while coronal/sagittal views 
+ *   use editable=false.
+ * - On mouseup, the parent updates its cache of mask slices with the modified blob.
+ */
 export default function MaskCanvas({ 
   blob, 
   width, 
@@ -24,6 +48,7 @@ export default function MaskCanvas({
     },
   }));
 
+  // Load initial blob into canvas
   useEffect(() => {
     if (!blob) return;
     const cv = canvasRef.current;
@@ -41,6 +66,7 @@ export default function MaskCanvas({
     })();
   }, [blob, width, height]);
 
+  // Enable painting/erasing if editable
   useEffect(() => {
     if (!editable) return;
     const cv = canvasRef.current;
@@ -56,6 +82,7 @@ export default function MaskCanvas({
         });
       }
     };
+
     const move = (e) => {
       if (!drawingRef.current) return;
       const rect = cv.getBoundingClientRect();

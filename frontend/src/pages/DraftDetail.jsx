@@ -21,7 +21,7 @@ export default function DraftDetail() {
   const [maskOpacity, setMaskOpacity] = useState(0.35);
 
   const cacheImg = useRef(new Map());
-  const cacheMask = useRef(new Map());
+  const cacheMask = useRef(new Map()); // item_id -> np.array. 
 
   // Brush tool
   const [editMode, setEditMode] = useState(false);
@@ -113,7 +113,7 @@ export default function DraftDetail() {
   const saveCurrentAxialSlice = async () => {
     if (!brushRef.current) return;
     // PNG data URL -> Blob
-    const dataUrl = brushRef.current.getBinaryPNG();
+    const dataUrl = brushRef.current.getPNG();
     const bin = await (await fetch(dataUrl)).blob();
     const form = new FormData();
     form.append("png", bin, "slice.png");
@@ -138,34 +138,31 @@ export default function DraftDetail() {
     setMeta(m);
   };
 
+  const clearEdits = async () => {
+    // Clear cached mask slices
+    cacheMask.current = new Map();
+    fetchMaskSlice("axial", idx.axial);
+  }
+
   if (!meta || !selectedItem) return <div className="p-6">Loading…</div>;
 
   return (
     <div className="p-6 grid grid-cols-12 gap-4">
       {/* Sidebar: items in this draft */}
-      <aside className="col-span-2 border rounded p-3 bg-white">
+      <aside className="col-span-2 border border-[#282828] rounded-xl p-3">
         <div className="font-semibold mb-2">Scans</div>
         <ul className="space-y-1">
           {meta.items?.map(it => (
             <li key={it.item_id}>
               <button
                 onClick={() => setSelectedItem(it.item_id)}
-                className={`w-full text-left px-2 py-1 rounded ${selectedItem===it.item_id ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"}`}
+                className={`w-full text-left px-2 py-1 rounded ${selectedItem===it.item_id ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400" : "hover:border-gray"}`}
               >
                 {it.item_id} · {it.segmented ? "segmented" : "unsegmented"}
               </button>
             </li>
           ))}
         </ul>
-        <div className="mt-4">
-          <button
-            onClick={segmentOne}
-            className="w-full px-3 py-2 rounded text-white"
-            style={{ backgroundColor: "#2563eb" }}
-          >
-            Segment Selected
-          </button>
-        </div>
         <div className="mt-4 border-t pt-3 space-y-2">
         <label className="flex items-center gap-2">
           <input
@@ -180,13 +177,13 @@ export default function DraftDetail() {
           <>
             <div className="flex gap-2">
               <button
-                className={`px-2 py-1 border rounded ${brushMode === "brush" ? "bg-blue-50" : ""}`}
+                className={`px-2 py-1 border rounded transition ${brushMode === "brush" ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400" : "border border-gray-600"}`}
                 onClick={()=>setBrushMode("brush")}
               >
                 Brush
               </button>
               <button
-                className={`px-2 py-1 border rounded ${brushMode === "erase" ? "bg-blue-50" : ""}`}
+                className={`px-2 py-1 border rounded ${brushMode === "erase" ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400" : "border border-gray-600"}`}
                 onClick={()=>setBrushMode("erase")}
               >
                 Erase
@@ -203,15 +200,15 @@ export default function DraftDetail() {
               />
               <span className="text-sm">{brushSize}px</span>
             </div>
-
-            <button
-              onClick={saveCurrentAxialSlice}
-              className="w-full px-3 py-2 border rounded hover:bg-gray-50"
-            >
-              Save axial slice
-            </button>
           </>
         )}
+        <button
+          onClick={clearEdits}
+          className="w-full px-3 py-2 rounded text-[#080808]"
+          style={{ backgroundColor: "#5f9ea0" }}
+        >
+          Clear Edits
+        </button>
       </div>
 
       </aside>
@@ -253,15 +250,46 @@ export default function DraftDetail() {
               min={0} max={shape ? shape[2] - 1 : 0}
               value={idx.axial} onChange={onSlide("axial")} disabled={!shape}
             />
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-white">
               {shape
                 ? `Slice ${idx.axial} / ${shape[2] - 1}`
                 : "Loading..."}
             </div>
           </div>
+          {/* Mask controls */}
+          <div className="col-span-5 mt-2 flex items-center gap-4">
+            <button
+              onClick={segmentOne}
+              className="px-3 py-2 rounded text-[#080808]"
+              style={{ backgroundColor: "#5f9ea0" }}
+            >
+              Run TotalSegmentator
+            </button>
+            <button
+              onClick={saveCurrentAxialSlice}
+              className="px-3 py-2 rounded text-[#080808]"
+              style={{ backgroundColor: "#5f9ea0" }}
+            >
+              Save slice
+            </button>
+            <div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={showMask} onChange={(e)=>setShowMask(e.target.checked)} />
+                Show mask
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Opacity</span>
+                <input type="range" min={0} max={1} step={0.05}
+                      value={maskOpacity}
+                      onChange={(e)=>setMaskOpacity(Number(e.target.value))}
+                      className="w-40" />
+                <span className="text-sm">{Math.round(maskOpacity*100)}%</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Side stack: slightly “stretched” boxes */}
+        {/* Side stack: slightly stretched boxes */}
         <div className="col-span-2 flex flex-col gap-4">
           {/* Coronal View */}
           <div className=" relative h-[29vh]">
@@ -315,22 +343,6 @@ export default function DraftDetail() {
               min={0} max={shape ? shape[0] - 1 : 0}
               value={idx.sagittal} onChange={onSlide("sagittal")} disabled={!shape}
             />
-          </div>
-        </div>
-
-        {/* Mask controls */}
-        <div className="col-span-5 mt-2 flex items-center gap-4">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={showMask} onChange={(e)=>setShowMask(e.target.checked)} />
-            Show mask
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Opacity</span>
-            <input type="range" min={0} max={1} step={0.05}
-                   value={maskOpacity}
-                   onChange={(e)=>setMaskOpacity(Number(e.target.value))}
-                   className="w-40" />
-            <span className="text-sm text-gray-600">{Math.round(maskOpacity*100)}%</span>
           </div>
         </div>
       </section>

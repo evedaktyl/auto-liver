@@ -1,5 +1,11 @@
 import { useEffect, useRef } from "react";
 
+/**
+ * ScanCanvas displays a scan slice inside an HTML <canvas>.
+ *
+ * Props:
+ * @param {Blob} blob - The scan slice image (PNG) to render.
+ */
 export default function ScanCanvas({ blob }) {
   const ref = useRef(null);
 
@@ -26,5 +32,5 @@ export default function ScanCanvas({ blob }) {
     return () => { cancel = true };
   }, [blob]);
 
-  return <canvas ref={ref} className="w-full h-full border rounded" />;
+  return <canvas ref={ref} className="w-full h-full border border-[#282828] rounded-xl" />;
 }
