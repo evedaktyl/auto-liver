@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
@@ -8,6 +9,7 @@ const API = "http://localhost:8000";
 const PLANES = ["axial", "coronal", "sagittal"];
 
 export default function DraftDetail() {
+  const navigate = useNavigate();
   const { draftId } = useParams();
 
   const [meta, setMeta] = useState(null);
@@ -30,6 +32,7 @@ export default function DraftDetail() {
   const brushRef = useRef(null);
   const [axialSize, setAxialSize] = useState({w: 0, h: 0});
   const maskRef = useRef(null);
+  const [isEdited, setIsEdited] = useState(false);
 
   // Load draft meta
   useEffect(() => {
@@ -110,24 +113,54 @@ export default function DraftDetail() {
     if (showMask) await fetchMaskSlice(plane, v);
   };
 
-  const saveCurrentAxialSlice = async () => {
-    if (!brushRef.current) return;
-    // PNG data URL -> Blob
-    const dataUrl = brushRef.current.getPNG();
-    const bin = await (await fetch(dataUrl)).blob();
-    const form = new FormData();
-    form.append("png", bin, "slice.png");
-    const url = `${API}/drafts/${draftId}/mask/slice?item=${selectedItem}&plane=axial&index=${idx.axial}`;
-    const r = await fetch(url, { method: "PUT", body: form });
-    if (!r.ok) { console.error("save failed"); return; }
-    // refresh overlay cache for this slice
-    await fetchMaskSlice("axial", idx.axial);
-  };
+  const saveDraft = async () => {
+    // Write all axial slices in cacheMask for current selectedItem to drafts/workspace
+    for (let i = 0; i < shape[0]; i++) {
+      const key = `${selectedItem}:axial:${i}`;
+      if (cacheMask.current.has(key)) {
+        const form = new FormData();
+        form.append("png", cacheMask.current.get(key), "slice.png");
+        const url = `${API}/drafts/${draftId}/mask/slice?item=${selectedItem}&plane=axial&index=${i}`;
+        const r = await fetch(url, { method: "PUT", body: form });
+        if (!r.ok) { console.error("save failed"); return; }
+      }
+    }
+    document.getElementById("clearEditsButton").setAttribute("disabled", "disabled");
+  }
+
+  const saveFinal = async () => {
+    try {
+      await saveDraft();
+
+      // Move draft to permanent folder
+      const url = `${API}/drafts/${draftId}/save?item=${selectedItem}`;
+      const r = await fetch(url, { method: "POST" });
+
+      if (!r.ok) { throw new Error(`Save failed with status ${r.status}`); }
+
+      // Refetch meta. 
+      const r2 = await fetch(`${API}/drafts/${draftId}`);
+      if (!r2.ok) {
+        // Zero items remaining in draft (draft folder deleted)
+        navigate(`/scans`);
+        return;
+      }
+
+      // Refresh to show remaining items in draft
+      const m = await r2.json();
+      setMeta(m);
+      setSelectedItem(m.items?.[0]?.item_id || null);
+    } catch (err) {
+      console.error("SaveFinal failed:", err);
+      return null;
+    }
+  }
 
   const segmentOne = async () => {
     if (!selectedItem) return;
     await fetch(`${API}/drafts/${draftId}/segment?item=${selectedItem}`, { method: "POST" });
     // refresh current mask slices
+    await clearEdits();
     await fetchMaskSlice("axial", idx.axial);
     await fetchMaskSlice("coronal", idx.coronal);
     await fetchMaskSlice("sagittal", idx.sagittal);
@@ -139,12 +172,17 @@ export default function DraftDetail() {
   };
 
   const clearEdits = async () => {
-    // Clear cached mask slices
-    cacheMask.current = new Map();
-    fetchMaskSlice("axial", idx.axial);
+    // Clear cached mask slices of this item
+    for (const key of cacheMask.current.keys()) {
+      if (key.split(":")[0].includes(`${selectedItem}`)) {
+        cacheMask.current.delete(key);
+      }
+    }
+    await fetchMaskSlice("axial", idx.axial);
+    document.getElementById("clearEditsButton").setAttribute("disabled", "disabled");
   }
 
-  if (!meta || !selectedItem) return <div className="p-6">Loading…</div>;
+  if (!meta || !selectedItem) return <div className="p-6">Empty draft/Draft not found!</div>;
 
   return (
     <div className="p-6 grid grid-cols-12 gap-4">
@@ -203,9 +241,9 @@ export default function DraftDetail() {
           </>
         )}
         <button
+          id="clearEditsButton"
           onClick={clearEdits}
-          className="w-full px-3 py-2 rounded text-[#080808]"
-          style={{ backgroundColor: "#5f9ea0" }}
+          className="w-full px-3 py-2 rounded bg-[#5f9ea0] text-[#080808] disabled:bg-gray-400 disabled:text-gray-500"
         >
           Clear Edits
         </button>
@@ -235,6 +273,7 @@ export default function DraftDetail() {
                     const key = `${selectedItem}:axial:${idx.axial}`;
                     cacheMask.current.set(key, blob);
                     setMaskBlobs((s) => ({ ...s, axial: blob }));
+                    document.getElementById("clearEditsButton").removeAttribute("disabled");
                   }}
                   />
                 )}
@@ -248,7 +287,7 @@ export default function DraftDetail() {
             <input
               type="range" className="w-full"
               min={0} max={shape ? shape[2] - 1 : 0}
-              value={idx.axial} onChange={onSlide("axial")} disabled={!shape}
+              value={idx.axial} onChange={onSlide("axial")}
             />
             <div className="text-xs text-white">
               {shape
@@ -260,17 +299,21 @@ export default function DraftDetail() {
           <div className="col-span-5 mt-2 flex items-center gap-4">
             <button
               onClick={segmentOne}
-              className="px-3 py-2 rounded text-[#080808]"
-              style={{ backgroundColor: "#5f9ea0" }}
+              className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5]"
             >
               Run TotalSegmentator
             </button>
             <button
-              onClick={saveCurrentAxialSlice}
-              className="px-3 py-2 rounded text-[#080808]"
-              style={{ backgroundColor: "#5f9ea0" }}
+              onClick={saveDraft}
+              className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5]"
             >
-              Save slice
+              Save draft
+            </button>
+            <button
+              onClick={saveFinal}
+              className="px-3 py-2 rounded text-[#080808] bg-[#dcdcdcff] hover:bg-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              Save Final
             </button>
             <div>
               <label className="flex items-center gap-2 text-sm">
@@ -333,7 +376,7 @@ export default function DraftDetail() {
             <input
               type="range" className="w-full"
               min={0} max={shape ? shape[1] - 1 : 0}
-              value={idx.coronal} onChange={onSlide("coronal")} disabled={!shape}
+              value={idx.coronal} onChange={onSlide("coronal")}
             />
           </div>
           <div>
@@ -341,7 +384,7 @@ export default function DraftDetail() {
             <input
               type="range" className="w-full"
               min={0} max={shape ? shape[0] - 1 : 0}
-              value={idx.sagittal} onChange={onSlide("sagittal")} disabled={!shape}
+              value={idx.sagittal} onChange={onSlide("sagittal")}
             />
           </div>
         </div>

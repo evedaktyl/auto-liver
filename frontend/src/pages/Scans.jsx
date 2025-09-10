@@ -28,7 +28,7 @@ export default function Scans() {
                             className="bg-white p-4 rounded shadow flex justify-between items-center"
                             >
                                 <div>
-                                <p className="font-semibold">{scan.original_filename}</p>
+                                <p className="font-semibold">{scan.filename}</p>
                                 <p className="text-sm text-gray-500">Scan type: {scan.scan_type}</p>
                                 <p className="text-sm text-gray-500">
                                     Segmented: {scan.segmented ? "✅ Yes" : "❌ No"}
