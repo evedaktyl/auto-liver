@@ -21,7 +21,7 @@ export default function DraftDetail() {
   const [maskOpacity, setMaskOpacity] = useState(0.35);
 
   const cacheImg = useRef(new Map());
-  const cacheMask = useRef(new Map()); // item_id -> np.array. 
+  const cacheMask = useRef(new Map()); // item_id -> { shape:[x,y,z], data: Uint8Array } 
 
   // Brush tool
   const [editMode, setEditMode] = useState(false);
@@ -64,7 +64,14 @@ export default function DraftDetail() {
       fetchSlice("axial", mid.axial);
       fetchSlice("coronal", mid.coronal);
       fetchSlice("sagittal", mid.sagittal);
-      fetchMaskSlice("axial", mid.axial);
+
+      // const vol = await fetchMaskVol();
+      // if (!vol) return;
+
+      // const imgData = sliceFromVol(vol, "axial", mid.axial);
+      // setMaskBlobs((s) => ({ ...s, axial: imgData }));
+
+      // fetchMaskSlice("axial", mid.axial);
       fetchMaskSlice("coronal", mid.coronal);
       fetchMaskSlice("sagittal", mid.sagittal);
     })();
@@ -88,6 +95,40 @@ export default function DraftDetail() {
       setAxialSize({ w: bmp.width, h: bmp.height });
     }
   };
+
+  const fetchMaskVol = async () => {
+    if (cacheMask.current.has(selectedItem)) return cacheMask.current.get(selectedItem);
+
+    const url = `${API}/drafts/${draftId}/mask/array?item=${selectedItem}`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const json = await r.json();
+
+    const arr = new Uint8Array(json.data);
+    const vol = { shape: json.shape, data: arr };
+    cacheMask.current.set(selectedItem, vol);
+    return vol;
+  }
+
+  function sliceFromVol(vol, plane, index) {
+    const [X, Y, Z] = vol.shape;
+    const out = new Uint8ClampedArray(X * Y * 4);
+    let ptr = 0;
+
+    if (plane === "axial") {
+      for (let y = 0; y < Y; y++) {
+        for (let x = 0; x < X; x++) {
+          const v = vol.data[x + y*X + index*X*Y]; // arr[x,y,z]
+          out[ptr++] = 255; // red
+          out[ptr++] = 0;
+          out[ptr++] = 0;
+          out[ptr++] = v ? 200 : 0; // alpha
+        }
+      }
+      return new ImageData(out, X, Y);
+    }
+    return null;
+  }
 
   const fetchMaskSlice = async (plane, index) => {
     const key = `${selectedItem}:${plane}:${index}`;

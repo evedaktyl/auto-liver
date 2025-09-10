@@ -5,10 +5,12 @@ import { useNavigate } from "react-router-dom";
 const API = "http://localhost:8000";
 
 export default function Drafts() {
-  const [drafts, setDrafts] = useState([]);           // [{draft_id, title, scan_type, items:[...]}]
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [progress, setProgress] = useState({});       // draftId -> {done, total, state}
+
+  const [drafts, setDrafts] = useState([]);     // [{draft_id, title, scan_type, items:[...]}]
+  const [progress, setProgress] = useState({}); // draftId -> {done, total, state}
+
   const navigate = useNavigate();
 
   const fetchDrafts = async () => {
@@ -44,7 +46,7 @@ export default function Drafts() {
         break;
       }
     }
-    // refresh data + finalize state
+    
     await fetchDrafts();
     setProgress(p => {
       const cur = p[draftId];
@@ -57,7 +59,7 @@ export default function Drafts() {
   const saveAllInDraft = async (draftId) => {
     const r = await fetch(`${API}/drafts/${draftId}/save_all`, { method: "POST" });
     if (!r.ok) return;
-    // Optionally: toast or navigate to a “Saved Scans” page
+
     await fetchDrafts();
   };
 
@@ -67,8 +69,8 @@ export default function Drafts() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Current Uploads</h1>
-        <button onClick={fetchDrafts} className="px-3 py-2 border rounded hover:bg-gray-50">
+        <h1 className="text-2xl font-[Avenir-Heavy]">Current Drafts</h1>
+        <button onClick={fetchDrafts} className="px-3 py-2 border rounded hover:bg-[#121212]">
           Refresh
         </button>
       </div>
@@ -89,20 +91,20 @@ export default function Drafts() {
             state === "running" ? "bg-yellow-100 text-yellow-800" :
             state === "error"   ? "bg-red-100 text-red-800" :
             state === "done"    ? "bg-green-100 text-green-800" :
-                                  "bg-gray-100 text-gray-800";
+                                  "bg-[#3b3b3b] text-gray-200";
 
           return (
-            <div key={d.draft_id} className="border rounded p-4 bg-white flex flex-col gap-3">
+            <div key={d.draft_id} className="border border-[#3b3b3b] rounded p-4 bg-[#222222] flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="font-semibold truncate">
+                <div className="font-[Avenir-Heavy] truncate text-xl">
                   {d.title ? d.title : `Draft ${d.draft_id}`}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded ${badge}`}>
+                <span className={`text-sm px-2 py-1 rounded ${badge}`}>
                   {state === "idle" ? (seg === total ? "all segmented" : "idle") : state}
                 </span>
               </div>
 
-              <div className="text-sm text-gray-600 space-y-1">
+              <div className="text-base text-gray-300 space-y-1">
                 <div><span className="font-medium">Type:</span> {d.scan_type}</div>
                 <div><span className="font-medium">Items:</span> {total} ({seg} segmented)</div>
               </div>
@@ -110,14 +112,14 @@ export default function Drafts() {
               {state === "running" && (
                 <div className="w-full bg-gray-100 rounded h-2">
                   <div className="h-2 rounded"
-                       style={{ width: `${pct}%`, backgroundColor: "#2563eb" }} />
+                       style={{ width: `${pct}%`, backgroundColor: "#5f9ea0" }} />
                 </div>
               )}
 
               <div className="mt-2 flex items-center gap-2">
                 <button
                   onClick={() => navigate(`/drafts/${d.draft_id}`)}
-                  className="px-3 py-2 border rounded hover:bg-gray-50"
+                  className="px-3 py-2 border rounded bg-[#636363] hover:bg-gray-400"
                 >
                   Open
                 </button>
@@ -125,13 +127,13 @@ export default function Drafts() {
                   onClick={() => segmentAllInDraft(d.draft_id, d.items || [])}
                   disabled={state === "running" || (d.items || []).every(i => i.segmented)}
                   className={`px-3 py-2 rounded text-white ${state === "running" ? "opacity-60 cursor-not-allowed" : ""}`}
-                  style={{ backgroundColor: "#2563eb" }}
+                  style={{ backgroundColor: "#5f9ea0" }}
                 >
                   {state === "running" ? "Segmenting…" : "Segment All"}
                 </button>
                 <button
                   onClick={() => saveAllInDraft(d.draft_id)}
-                  className="px-3 py-2 border rounded hover:bg-gray-50"
+                  className="px-3 py-2 border rounded"
                 >
                   Save All
                 </button>
