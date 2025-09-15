@@ -23,7 +23,7 @@ export default function DraftDetail() {
   const [maskOpacity, setMaskOpacity] = useState(0.35);
 
   const cacheImg = useRef(new Map());
-  const cacheMask = useRef(new Map()); // item_id -> np.array. 
+  const cacheMask = useRef(new Map());
 
   // Brush tool
   const [editMode, setEditMode] = useState(false);
@@ -33,6 +33,9 @@ export default function DraftDetail() {
   const [axialSize, setAxialSize] = useState({w: 0, h: 0});
   const maskRef = useRef(null);
   const [isEdited, setIsEdited] = useState(false);
+
+  // Status
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load draft meta
   useEffect(() => {
@@ -125,7 +128,7 @@ export default function DraftDetail() {
         if (!r.ok) { console.error("save failed"); return; }
       }
     }
-    document.getElementById("clearEditsButton").setAttribute("disabled", "disabled");
+    setIsEdited(false);
   }
 
   const saveFinal = async () => {
@@ -158,12 +161,15 @@ export default function DraftDetail() {
 
   const segmentOne = async () => {
     if (!selectedItem) return;
+    setIsLoading(true);
     await fetch(`${API}/drafts/${draftId}/segment?item=${selectedItem}`, { method: "POST" });
     // refresh current mask slices
     await clearEdits();
     await fetchMaskSlice("axial", idx.axial);
     await fetchMaskSlice("coronal", idx.coronal);
     await fetchMaskSlice("sagittal", idx.sagittal);
+    
+    setIsLoading(false);
 
     const r = await fetch(`${API}/drafts/${draftId}`);
     if (!r.ok) return;
@@ -179,7 +185,7 @@ export default function DraftDetail() {
       }
     }
     await fetchMaskSlice("axial", idx.axial);
-    document.getElementById("clearEditsButton").setAttribute("disabled", "disabled");
+    setIsEdited(false);
   }
 
   if (!meta || !selectedItem) return <div className="p-6">Empty draft/Draft not found!</div>;
@@ -204,9 +210,11 @@ export default function DraftDetail() {
         <div className="mt-4 border-t pt-3 space-y-2">
         <label className="flex items-center gap-2">
           <input
+            id="editMaskButton"
             type="checkbox"
             checked={editMode}
             onChange={(e)=>setEditMode(e.target.checked)}
+            disabled={isLoading}
           />
           Edit mask (axial)
         </label>
@@ -243,7 +251,8 @@ export default function DraftDetail() {
         <button
           id="clearEditsButton"
           onClick={clearEdits}
-          className="w-full px-3 py-2 rounded bg-[#5f9ea0] text-[#080808] disabled:bg-gray-400 disabled:text-gray-500"
+          disabled={!isEdited || isLoading}
+          className="w-full px-3 py-2 rounded bg-[#5f9ea0] text-[#080808] disabled:bg-background-200 disabled:text-gray-500"
         >
           Clear Edits
         </button>
@@ -273,10 +282,16 @@ export default function DraftDetail() {
                     const key = `${selectedItem}:axial:${idx.axial}`;
                     cacheMask.current.set(key, blob);
                     setMaskBlobs((s) => ({ ...s, axial: blob }));
-                    document.getElementById("clearEditsButton").removeAttribute("disabled");
+                    setIsEdited(true);
                   }}
                   />
                 )}
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-white"></div>
               </div>
             )}
           </div>
@@ -299,13 +314,15 @@ export default function DraftDetail() {
           <div className="col-span-5 mt-2 flex items-center gap-4">
             <button
               onClick={segmentOne}
-              className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5]"
+              disabled={isLoading}
+              className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5] disabled:bg-background-200 disabled:text-gray-500"
             >
               Run TotalSegmentator
             </button>
             <button
               onClick={saveDraft}
-              className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5]"
+              disabled={isLoading}
+              className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5] disabled:bg-background-200 disabled:text-gray-500"
             >
               Save draft
             </button>
@@ -349,6 +366,12 @@ export default function DraftDetail() {
               ref={maskRef}
               />
             )}
+
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-white"></div>
+              </div>
+            )}
             </div>
           </div>
           
@@ -366,6 +389,12 @@ export default function DraftDetail() {
               opacity={maskOpacity}
               ref={maskRef}
               />
+            )}
+
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-white"></div>
+              </div>
             )}
             </div>
           </div>

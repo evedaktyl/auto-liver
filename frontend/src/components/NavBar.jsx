@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
+import ThemeToggle from './ThemeToggle';
 
 export default function NavBar() {
     return (
@@ -16,7 +17,9 @@ export default function NavBar() {
                     Scans
                 </NavLink>
             </div>
-            <div>Username</div>
+            <div>Username
+                <ThemeToggle/>
+            </div>
             </div>
         </nav>
     );

@@ -5,7 +5,6 @@ export default function ThemeToggle() {
     () => document.documentElement.classList.contains("dark")
   );
 
-  // Sync state with <html> class
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add("dark");
@@ -17,7 +16,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setDark(!dark)}
-      className="px-3 py-1 rounded bg-secondary-300 text-background-50"
+      className={dark ? "px-3 py-1 rounded bg-background-900 text-dark-text" : "px-3 py-1 rounded bg-background-50 text-text-900"}
     >
       {dark ? "🌙 Dark" : "☀️ Light"}
     </button>
