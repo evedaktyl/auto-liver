@@ -1,6 +1,6 @@
-
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
 /* --------------------
    Global font + defaults
 -------------------- */
@@ -8,7 +8,6 @@
   font-family: system-ui, Avenir, Avenir-Heavy, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -23,29 +22,32 @@ html, body, #root {
    Dark mode (default)
 -------------------- */
 :root {
-  color: #f8f8f8;
-  background-color: #121212;
-}
-
-/* --------------------
-   Light mode (when <html> has class="light")
--------------------- */
-.light {
   color: #213547;
   background-color: #ffffff;
 }
 
 /* --------------------
-   Links
+   Light mode (when <html> has class="light")
 -------------------- */
-@layer base {
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: Avenir;
+.dark {
+  color: #f8f8f8;
+  background-color: #121212;
 }
-a:hover {
-  color: #535bf2;
+
+/* --------------------
+   Colors (from realtimecolors.com)
+-------------------- */
+@theme {
+  --color-text-900: #11160e;
+  --color-background-50: #f7f9f6;
+  --color-primary-600: #425c38;
+  --color-secondary-300: #9dc3b7;
+  --color-accent-500: #5b9595;
+  --color-dark-text: #ecf1e9;
+  --color-background-900: #070906;
+  --color-dark-primary: #adc7a3;
+  --color-darksecondary: #3c6256;
+  --color-dark-accent: #6aa4a4;
 }
 
 /* --------------------
@@ -57,7 +59,7 @@ h1 {
 }
 
 /* --------------------
-   Buttons (retained style)
+   Buttons
 -------------------- */
 button {
   border-radius: 8px;
@@ -76,18 +78,14 @@ button:disabled {
   cursor: default;
 }
 
-/* button:focus,
-button:focus-visible {
-  background-color: #5f9ea0;
-} */
-
+/* --------------------
+   Form inputs
+-------------------- */
 input[type="range"] {
-  accent-color: #8cd3d5; /* Example: a shade of green */
-}
-
-input[type="checkbox"] {
   accent-color: #8cd3d5;
 }
+input[type="checkbox"] {
+  accent-color: #8cd3d5;
 }
 
 /* --------------------
@@ -97,7 +95,6 @@ input[type="checkbox"] {
   font-family: "Avenir";
   src: url("./assets/fonts/Avenir-Medium.ttf") format("truetype");
 }
-
 @font-face {
   font-family: "Avenir-Heavy";
   src: url("./assets/fonts/Avenir-Heavy.ttf") format("truetype");
