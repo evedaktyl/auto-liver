@@ -51,10 +51,9 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="p-8 bg-background-50 dark:bg-background-700 rounded-xl shadow max-w-xl w-full space-y-6">
-        <h2 className="text-2xl text-text-900 dark:text-dark-text">Upload Scans</h2>
-
+    <div className="min-h-screen flex flex-col items-center space-y-6 py-10">
+      <h2 className="text-2xl text-text-900 dark:text-dark-text">Upload Scans</h2>
+      <div className="px-10 py-15 bg-background-50 dark:bg-background-700 rounded-xl shadow max-w-xl w-full space-y-10">
         {/* Dropzone */}
         <label
           htmlFor="file-input"

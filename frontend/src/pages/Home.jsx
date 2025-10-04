@@ -10,7 +10,7 @@ export default function Home() {
         <h1 className="text-2xl font-semibold text-gray-700 dark:text-dark-text text-center">
           Auto Liver Annotation with TotalSegmentator
         </h1>
-        <button className="text-sm px-6 py-2 text-gray-700 dark:text-dark-text transition underline hover:text-[#00ff00]"
+        <button className="text-sm px-6 py-2 text-gray-700 dark:text-dark-text transition underline"
           onClick={() => navigate("/upload")}>
           Start Segmenting
         </button>
