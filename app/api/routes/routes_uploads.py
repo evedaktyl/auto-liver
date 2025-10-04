@@ -39,6 +39,7 @@ async def upload_scan(
     draft_dir = WORKSPACE_DIR / draft_id
     draft_dir.mkdir(parents=True, exist_ok=True)
 
+    # TODO: Add separate implementation for dcm files
     items = []
     for i, f in enumerate(files):
         dest = unique_dest(draft_dir, f.filename)
