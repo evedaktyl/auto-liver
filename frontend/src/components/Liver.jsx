@@ -77,7 +77,7 @@ export default function Liver() {
           size: 0.025,
           sizeAttenuation: true,
           transparent: true,
-          opacity: 0.9,
+          opacity: 0.7,
           blending: THREE.AdditiveBlending,
         });
 
@@ -92,7 +92,7 @@ export default function Liver() {
           requestAnimationFrame(animate);
           const t = clock.getElapsedTime();
           pointsMaterial.size = 0.02 + Math.sin(t * 2.0) * 0.005;
-          pointCloud.rotation.z -= 0.001;
+          pointCloud.rotation.z -= 0.002;
           controls.update();
           renderer.render(scene, camera);
         };
