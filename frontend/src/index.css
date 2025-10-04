@@ -90,9 +90,9 @@ input[type="checkbox"] {
 -------------------- */
 @font-face {
   font-family: "Avenir";
-  src: url("./assets/fonts/Avenir-Medium.ttf") format("truetype");
+  src: url("/fonts/Avenir-Medium.ttf") format("truetype");
 }
 @font-face {
   font-family: "Avenir-Heavy";
-  src: url("./assets/fonts/Avenir-Heavy.ttf") format("truetype");
+  src: url("/fonts/Avenir-Heavy.ttf") format("truetype");
 }
