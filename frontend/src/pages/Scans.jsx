@@ -5,7 +5,7 @@ export default function Scans() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        fetch("http://localhost:8000/scans")
+        fetch("https://auto-liver-backend.onrender.com/scans")
         .then((res) => {
             if (!res.ok) throw new Error("Failed to fetch scans");
             return res.json();

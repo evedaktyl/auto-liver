@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useRef, useEffect, useState } from "react";
 
 const PLANES = ["axial", "coronal", "sagittal"];
-const API_BASE = "http://localhost:8000/scans";
+const API_BASE = "https://auto-liver-backend.onrender.com/scans";
 
 const planeMax = (shape, plane) =>
     plane === "axial" ? shape[2] :
