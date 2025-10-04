@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
-const API = "https://auto-liver-backend.onrender.com/drafts";
+const API = "https://auto-liver-backend.onrender.com";
 const PLANES = ["axial", "coronal", "sagittal"];
 
 export default function DraftDetail() {
