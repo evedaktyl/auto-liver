@@ -34,7 +34,7 @@ export default function Liver() {
 
     const loader = new OBJLoader();
     loader.load(
-      "src/assets/liver.obj", // ✅ must be in /public
+      "/liver.obj",
       (obj) => {
         console.log("OBJ loaded:", obj);
 
