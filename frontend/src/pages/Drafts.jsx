@@ -1,14 +1,14 @@
-// app/frontend/src/pages/Drafts.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API = "http://localhost:8000";
 
 export default function Drafts() {
-  const [drafts, setDrafts] = useState([]);           // [{draft_id, title, scan_type, items:[...]}]
+  const [drafts, setDrafts] = useState([]);     // [{draft_id, title, scan_type, items:[...]}]
+  const [progress, setProgress] = useState({}); // draftId -> {done, total, state}
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [progress, setProgress] = useState({});       // draftId -> {done, total, state}
+
   const navigate = useNavigate();
 
   const fetchDrafts = async () => {
@@ -57,7 +57,7 @@ export default function Drafts() {
   const saveAllInDraft = async (draftId) => {
     const r = await fetch(`${API}/drafts/${draftId}/save_all`, { method: "POST" });
     if (!r.ok) return;
-    // Optionally: toast or navigate to a “Saved Scans” page
+    
     await fetchDrafts();
   };
 
@@ -92,17 +92,17 @@ export default function Drafts() {
                                   "bg-gray-100 text-gray-800";
 
           return (
-            <div key={d.draft_id} className="border rounded p-4 bg-white flex flex-col gap-3">
+            <div key={d.draft_id} className="border border-accent-500 rounded p-4 bg-white dark:bg-background-500 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="font-semibold truncate">
                   {d.title ? d.title : `Draft ${d.draft_id}`}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded ${badge}`}>
+                <span className={`text-xs px-2 py-1 rounded bg-background-50 dark:bg-background-200 ${badge}`}>
                   {state === "idle" ? (seg === total ? "all segmented" : "idle") : state}
                 </span>
               </div>
 
-              <div className="text-sm text-gray-600 space-y-1">
+              <div className="text-sm text-gray-600 dark:text-dark-text space-y-1">
                 <div><span className="font-medium">Type:</span> {d.scan_type}</div>
                 <div><span className="font-medium">Items:</span> {total} ({seg} segmented)</div>
               </div>
@@ -114,26 +114,33 @@ export default function Drafts() {
                 </div>
               )}
 
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                 <button
                   onClick={() => navigate(`/drafts/${d.draft_id}`)}
-                  className="px-3 py-2 border rounded hover:bg-gray-50"
+                  className="px-3 py-2 border rounded"
                 >
                   Open
                 </button>
                 <button
                   onClick={() => segmentAllInDraft(d.draft_id, d.items || [])}
-                  disabled={state === "running" || (d.items || []).every(i => i.segmented)}
-                  className={`px-3 py-2 rounded text-white ${state === "running" ? "opacity-60 cursor-not-allowed" : ""}`}
-                  style={{ backgroundColor: "#2563eb" }}
+                  disabled={state === "running"}
+                  hidden={(d.items || []).every(i => i.segmented)}
+                  className={`px-3 py-2 rounded text-white bg-accent-500 ${state === "running" ? "opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {state === "running" ? "Segmenting…" : "Segment All"}
                 </button>
                 <button
                   onClick={() => saveAllInDraft(d.draft_id)}
-                  className="px-3 py-2 border rounded hover:bg-gray-50"
+                  className="px-3 py-2 border rounded"
                 >
                   Save All
+                </button>
+                </div>
+                <button
+                  onClick={() => deleteDraft(d.draft_id)}
+                  className="px-3 py-2 border rounded">
+                  Clear
                 </button>
               </div>
             </div>

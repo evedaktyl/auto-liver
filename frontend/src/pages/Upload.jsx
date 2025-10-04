@@ -52,7 +52,7 @@ export default function Upload() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="p-8 bg-background-50 dark:bg-background-900 rounded-xl shadow max-w-xl w-full space-y-6">
+      <div className="p-8 bg-background-50 dark:bg-background-700 rounded-xl shadow max-w-xl w-full space-y-6">
         <h2 className="text-2xl text-text-900 dark:text-dark-text">Upload Scans</h2>
 
         {/* Dropzone */}
@@ -77,7 +77,7 @@ export default function Upload() {
             type="file"
             className="hidden"
             multiple
-            accept=".nii,.nii.gz,application/gzip"
+            accept=".nii,.nii.gz,application/gzip,.dcm" // TODO: Add "" ext in accept list, and multiple directories. 
             onChange={onPickFiles}
           />
         </label>
@@ -104,7 +104,7 @@ export default function Upload() {
 
         {/* Select scan type */}
         <div className="text-sm">
-          <label className="block text-gray-400 mb-1">
+          <label className="block text-gray-600 dark:text-gray-300 mb-1">
             Scan type
           </label>
           <select
@@ -133,7 +133,7 @@ export default function Upload() {
           </button>
         </div>
 
-        {status && <div className="text-sm text-gray-600">{status}</div>}
+        {status && <div className="text-sm text-gray-600 dark:text-gray-300">{status}</div>}
       </div>
     </div>
   );
