@@ -18,7 +18,10 @@ export default function ThemeToggle() {
       onClick={() => setDark(!dark)}
       className={dark ? "px-3 py-1 rounded bg-background-900 text-dark-text" : "px-3 py-1 rounded bg-background-50 text-text-900"}
     >
-      {dark ? "🌙 Dark" : "☀️ Light"}
+      <img
+        src={dark ? "src/assets/image.png" : "src/assets/night-mode.png"}
+        className="w-6 h-6"
+      />
     </button>
   );
 }
