@@ -9,7 +9,6 @@ const planeMax = (shape, plane) =>
     plane === "coronal" ? shape[1] :
     shape[0];
 
-/* Draws a single Blob to a <canvas> */
 function CanvasView({ blob }) {
     const ref = useRef(null);
 
