@@ -12,17 +12,43 @@ from app.services.store import save_item_to_scans_store
 from app.api.routes.routes_uploads import clean_stem
 from app.models.scan import MaskPayload
 
-WORKSPACE_DIR = Path("workspace")
+WORKSPACE_DIR = Path(__file__).resolve().parent.parent / "workspace"
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
     
 def _meta_path(draft_id: str) -> Path:
     return WORKSPACE_DIR / draft_id / "meta.json"
 
+# def _load_meta(draft_id: str) -> dict:
+#     mp = _meta_path(draft_id)
+#     if not mp.exists():
+#         raise HTTPException(404, "Draft not found")
+#     return json.loads(mp.read_text(encoding="utf-8"))
+
 def _load_meta(draft_id: str) -> dict:
     mp = _meta_path(draft_id)
     if not mp.exists():
         raise HTTPException(404, "Draft not found")
-    return json.loads(mp.read_text(encoding="utf-8"))
+    meta = json.loads(mp.read_text(encoding="utf-8"))
+
+    draft_dir = mp.parent
+    for it in meta.get("items", []):
+        # --- Fix scan path ---
+        p = Path(it.get("path", ""))
+        if not p.exists():
+            stored = it.get("stored_filename")
+            if stored:
+                p = draft_dir / stored
+        it["path"] = str(p)
+
+        mpth = it.get("mask_path")
+        if mpth:
+            mpath = Path(mpth)
+            if not mpath.exists():
+                mask_name = Path(mpth).name
+                mpath = draft_dir / mask_name
+            it["mask_path"] = str(mpath)
+
+    return meta
 
 def _save_meta(draft_id: str, meta: dict):
     _meta_path(draft_id).write_text(json.dumps(meta, indent=2), encoding="utf-8")
