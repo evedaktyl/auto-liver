@@ -38,8 +38,8 @@ export default function Liver() {
       (obj) => {
         console.log("OBJ loaded:", obj);
 
-        obj.scale.set(0.01, 0.01, 0.01);
-        obj.rotation.x = Math.PI + 2;
+        // obj.scale.set(0.01, 0.01, 0.01);
+        // obj.rotation.x = Math.PI + 2;
 
         const allPositions = [];
 
@@ -84,7 +84,7 @@ export default function Liver() {
         const pointCloud = new THREE.Points(pointsGeometry, pointsMaterial);
         pointCloud.scale.set(0.017, 0.017, 0.017);
         pointCloud.position.set(0, 0, 0);
-        pointCloud.rotation.set(Math.PI * 0.5, 3, 0);
+        pointCloud.rotation.set(Math.PI * 0.57, Math.PI, Math.PI + 0.5);
         scene.add(pointCloud);
 
         const clock = new THREE.Clock();
