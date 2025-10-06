@@ -56,8 +56,8 @@ export default function Drafts() {
   };
 
   const saveAllInDraft = async (draftId) => {
-    const r = await fetch(`${API}/drafts/${draftId}/save_all`, { method: "POST" });
-    if (!r.ok) return;
+    // const r = await fetch(`${API}/drafts/${draftId}/save_all`, { method: "POST" });
+    // if (!r.ok) return;
     
     await fetchDrafts();
   };
@@ -134,13 +134,15 @@ export default function Drafts() {
                 <button
                   onClick={() => saveAllInDraft(d.draft_id)}
                   className="px-3 py-2 border rounded"
+                  disabled
                 >
                   Save All
                 </button>
                 </div>
                 <button
                   onClick={() => deleteDraft(d.draft_id)}
-                  className="px-3 py-2 border rounded">
+                  className="px-3 py-2 border rounded"
+                  disabled>
                   Clear
                 </button>
               </div>
