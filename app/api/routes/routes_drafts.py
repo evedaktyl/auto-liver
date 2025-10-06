@@ -12,43 +12,18 @@ from app.services.store import save_item_to_scans_store
 from app.api.routes.routes_uploads import clean_stem
 from app.models.scan import MaskPayload
 
-WORKSPACE_DIR = Path(__file__).resolve().parent.parent.parent / "workspace"
+WORKSPACE_DIR = Path("workspace")
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
     
 def _meta_path(draft_id: str) -> Path:
+    print(WORKSPACE_DIR)
     return WORKSPACE_DIR / draft_id / "meta.json"
-
-# def _load_meta(draft_id: str) -> dict:
-#     mp = _meta_path(draft_id)
-#     if not mp.exists():
-#         raise HTTPException(404, "Draft not found")
-#     return json.loads(mp.read_text(encoding="utf-8"))
 
 def _load_meta(draft_id: str) -> dict:
     mp = _meta_path(draft_id)
     if not mp.exists():
         raise HTTPException(404, "Draft not found")
-    meta = json.loads(mp.read_text(encoding="utf-8"))
-
-    draft_dir = mp.parent
-    for it in meta.get("items", []):
-        # --- Fix scan path ---
-        p = Path(it.get("path", ""))
-        if not p.exists():
-            stored = it.get("stored_filename")
-            if stored:
-                p = draft_dir / stored
-        it["path"] = str(p)
-
-        mpth = it.get("mask_path")
-        if mpth:
-            mpath = Path(mpth)
-            if not mpath.exists():
-                mask_name = Path(mpth).name
-                mpath = draft_dir / mask_name
-            it["mask_path"] = str(mpath)
-
-    return meta
+    return json.loads(mp.read_text(encoding="utf-8"))
 
 def _save_meta(draft_id: str, meta: dict):
     _meta_path(draft_id).write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -82,7 +57,7 @@ def get_item_shape(
 ):
     meta = _load_meta(draft_id)
     it = _get_item(meta, item)
-    img = nib.load(it["path"])
+    img = nib.load(WORKSPACE_DIR/meta["draft_id"]/it["stored_filename"])
     x, y, z = img.shape
     return {"shape": [x, y, z]}
 
@@ -95,7 +70,7 @@ def slice_png(
 ):
     meta = _load_meta(draft_id)
     it = _get_item(meta, item)
-    img = nib.load(it["path"])
+    img = nib.load(WORKSPACE_DIR/meta["draft_id"]/it["stored_filename"])
     if plane == "axial":
         if index >= img.shape[2]: raise HTTPException(400, "index out of range")
         arr = np.rot90(np.asarray(img.dataobj[:, :, index], dtype=np.float32))
@@ -115,7 +90,7 @@ def _ensure_mask(meta, it) -> Path:
         if mask_path.exists() and mask_path.is_file():
             return mask_path
 
-    scan_img = nib.load(it["path"])
+    scan_img = nib.load(WORKSPACE_DIR/meta["draft_id"]/it["stored_filename"])
     empty = np.zeros(scan_img.shape, dtype=np.uint8)
 
     draft_dir = _meta_path(meta["draft_id"]).parent

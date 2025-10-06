@@ -2,9 +2,13 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
 import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
+// const API="http://localhost:8000";
 const API = "https://auto-liver-backend.onrender.com";
 const PLANES = ["axial", "coronal", "sagittal"];
 
@@ -159,9 +163,29 @@ export default function DraftDetail() {
     }
   }
 
-  const saveToDesktop = () => {
+  const saveToDesktop = async () => {
+    const zip = new JSZip();
+    const scansFolder = zip.folder("scans");
+    const masksFolder = zip.folder("masks");
 
-  }
+    const addBlob = (folder, name, blob) => {
+      if (!blob) return;
+      folder.file(name, blob);
+    };
+
+    for (const plane of ["axial", "coronal", "sagittal"]) {
+      addBlob(scansFolder, `${plane}.png`, imgBlobs[plane]);
+      addBlob(masksFolder, `${plane}_mask.png`, maskBlobs[plane]);
+    }
+
+    zip.file(
+      "info.txt",
+      `Exported from demo ${new Date().toISOString()}\nDraft ID: ${draftId}\n`
+    );
+
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, `${draftId}_scans.zip`);
+  };
 
   const segmentOne = async () => {
     if (!selectedItem) return;
