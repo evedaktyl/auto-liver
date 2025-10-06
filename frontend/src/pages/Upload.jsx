@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "https://auto-liver-backend.onrender.com";
+const API = "http://localhost:8000";
+// const API = "https://auto-liver-backend.onrender.com/";
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -49,6 +50,11 @@ export default function Upload() {
       setStatus("Upload failed. Check server logs.");
     }
   };
+
+  const handleUseSample = () => {
+    setStatus("Uploaded. Redirecting...");
+    navigate(`/drafts/5CE541FF`);
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center space-y-6 py-10">
@@ -119,10 +125,11 @@ export default function Upload() {
         {/* Actions */}
         <div className="flex items-center gap-3">
           <button
-            onClick={handleSubmit}
+            onClick={handleUseSample}
+            title="Demo mode uses sample scans"
             className="px-4 py-2 rounded text-white bg-accent-500 dark:bg-dark-accent"
           >
-            Upload
+            Use Sample Scans
           </button>
           <button
             onClick={() => inputRef.current?.click()}
