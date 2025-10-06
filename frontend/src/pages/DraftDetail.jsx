@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
-const API = "https://auto-liver-backend.onrender.com";
+const API = "https://auto-liver-backend.onrender.com/";
 const PLANES = ["axial", "coronal", "sagittal"];
 
 export default function DraftDetail() {
@@ -157,6 +157,10 @@ export default function DraftDetail() {
       console.error("SaveFinal failed:", err);
       return null;
     }
+  }
+
+  const saveToDesktop = () => {
+
   }
 
   const segmentOne = async () => {
@@ -328,9 +332,13 @@ export default function DraftDetail() {
             </button>
             <button
               onClick={saveFinal}
-              className="px-3 py-2 rounded text-[#080808] bg-[#dcdcdcff] hover:bg-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
+              className="hidden px-3 py-2 rounded text-[#080808] bg-[#dcdcdcff] hover:bg-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
             >
               Save Final
+            </button>
+            <button onClick={saveToDesktop}>
+              <img src="/export.png" className="w-6 h-6">
+              </img>
             </button>
             <div>
               <label className="flex items-center gap-2 text-sm">
