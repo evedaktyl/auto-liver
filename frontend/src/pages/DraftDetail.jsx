@@ -9,7 +9,8 @@ import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
 // const API="http://localhost:8000";
-const API = "https://auto-liver-backend.onrender.com";
+const API = "https://entities-result-cash-recommends.trycloudflare.com";
+
 const PLANES = ["axial", "coronal", "sagittal"];
 
 export default function DraftDetail() {
