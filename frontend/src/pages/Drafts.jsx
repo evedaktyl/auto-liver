@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "https://auto-liver-backend.onrender.com/";
+const API = "https://auto-liver-backend.onrender.com";
 
 export default function Drafts() {
   const [drafts, setDrafts] = useState([]);     // [{draft_id, title, scan_type, items:[...]}]
