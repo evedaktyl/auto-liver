@@ -12,7 +12,7 @@ from app.services.store import save_item_to_scans_store
 from app.api.routes.routes_uploads import clean_stem
 from app.models.scan import MaskPayload
 
-WORKSPACE_DIR = Path(__file__).resolve().parent.parent / "workspace"
+WORKSPACE_DIR = Path(__file__).resolve().parent.parent.parent / "workspace"
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
     
 def _meta_path(draft_id: str) -> Path:
