@@ -9,7 +9,7 @@ import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
 // const API="http://localhost:8000";
-const API = "https://entities-result-cash-recommends.trycloudflare.com";
+const API = "https://breach-merit-hundred-varies.trycloudflare.com";
 
 const PLANES = ["axial", "coronal", "sagittal"];
 
