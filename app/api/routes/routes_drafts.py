@@ -16,7 +16,6 @@ WORKSPACE_DIR = Path("workspace")
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
     
 def _meta_path(draft_id: str) -> Path:
-    print(WORKSPACE_DIR)
     return WORKSPACE_DIR / draft_id / "meta.json"
 
 def _load_meta(draft_id: str) -> dict:
