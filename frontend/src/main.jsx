@@ -8,12 +8,14 @@ import Drafts from './pages/Drafts.jsx'
 import DraftDetail from './pages/DraftDetail.jsx'
 import NavBar from './components/NavBar.jsx'
 import './index.css'
+import Home from './pages/Home.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
     <NavBar/>
     <Routes>
+      <Route path='/' element={<Home />}/>
       <Route path="/upload" element={<Upload />}/>
       <Route path="/scans" element={<Scans />}/>
       <Route path="/scans/:scanId" element={<ScanDetail />}/>

@@ -331,7 +331,7 @@ export default function DraftDetail() {
               onClick={saveFinal}
               className="px-3 py-2 rounded text-[#080808] bg-[#dcdcdcff] hover:bg-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
             >
-              Save Final
+              Save Final To 4090
             </button>
             <div>
               <label className="flex items-center gap-2 text-sm">

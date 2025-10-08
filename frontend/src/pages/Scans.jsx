@@ -17,7 +17,7 @@ export default function Scans() {
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
             <div className="max-w-2xl w-full">
-                <h2 className="text-2xl font-bold mb-6">Uploaded Scans</h2>
+                <h2 className="text-2xl font-bold mb-6">Finalized Scans</h2>
                 {error && <p className="text-red-500 mb-4">{error}</p>}
                 {scans.length === 0 ? (
                     <p className="text-gray-600">No scans found.</p>
@@ -25,7 +25,7 @@ export default function Scans() {
                     <ul className="space-y-4">
                         {scans.map((scan) => (
                             <li key={scan.scan_id}
-                            className="bg-white p-4 rounded shadow flex justify-between items-center"
+                            className="bg-white dark:bg-background-500 p-4 rounded shadow flex justify-between items-center"
                             >
                                 <div>
                                 <p className="font-semibold">{scan.filename}</p>
@@ -36,7 +36,7 @@ export default function Scans() {
                                 </div>
                                 <a
                                 href={`/scans/${scan.scan_id}`}
-                                className="text-blue-600 hover:underline text-sm"
+                                className="text-accent-500 hover:underline text-sm"
                                 >
                                 View
                                 </a>
