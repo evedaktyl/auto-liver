@@ -61,6 +61,10 @@ export default function Drafts() {
     await fetchDrafts();
   };
 
+  const deleteDraft = async (draftId) => {
+    const r = await fetch(`${API}/drafts/${draftId}/delete`, { method: "POST" });
+  }
+
   if (loading) return <div className="p-6">Loading…</div>;
   if (err) return <div className="p-6 text-red-600">{err}</div>;
 

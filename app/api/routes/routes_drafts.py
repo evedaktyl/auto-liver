@@ -10,7 +10,6 @@ from app.services.segment import segment
 from app.services.slice_png import slice_to_png_bytes, mask_to_rgba_png_bytes
 from app.services.store import save_item_to_scans_store
 from app.api.routes.routes_uploads import clean_stem
-from app.models.scan import MaskPayload
 
 WORKSPACE_DIR = Path("workspace")
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
@@ -230,3 +229,15 @@ def put_mask_slice(
 
   nib.save(nib.Nifti1Image(vol, mimg.affine, mimg.header), str(mask_path))
   return {"message": "slice saved", "mask_path": str(mask_path)}
+
+# @router.post("/{draft_id}/delete")
+# def delete(draft_id: str):
+    # meta = _load_meta(draft_id)
+    # results = []
+    # for it in meta.get("items") or []:
+    #     mask = Path(it["mask_path"]) if it.get("mask_path") else None
+    #     # you can choose to only save segmented items, or also save raw scans
+    #     if mask and mask.exists():
+    #         saved = save_item_to_scans_store(Path(it["path"]), mask, it["segmented"], meta.get("scan_type", "CT"))
+    #         results.append(saved["scan_id"])
+#     return {"message": "saved", "count": len(results), "scan_ids": results}
