@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
-const API = "http://localhost:8000";
+const API = "https://blake-worcester-humanities-felt.trycloudflare.com";
 const PLANES = ["axial", "coronal", "sagittal"];
 
 export default function DraftDetail() {
