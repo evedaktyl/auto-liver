@@ -38,3 +38,6 @@ def save_scan(file: UploadFile) -> Tuple[int, Path]:
         shutil.copyfileobj(file.file, f)
 
     return scan_id, destination
+
+def delete_draft(draft_dir: Path):
+    shutil.rmtree(draft_dir)
