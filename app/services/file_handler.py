@@ -62,3 +62,6 @@ def save_scan(file: UploadFile, scan_type: str) -> Tuple[int, dict]:
         json.dump(meta, f, indent=4)
 
     return scan_id, meta
+
+def delete_draft(draft_dir: Path):
+    shutil.rmtree(draft_dir)
