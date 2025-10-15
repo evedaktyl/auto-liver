@@ -329,6 +329,7 @@ export default function DraftDetail() {
             </button>
             <button
               onClick={saveFinal}
+              disabled={isLoading[selectedItem]}
               className="px-3 py-2 rounded text-[#080808] bg-[#dcdcdcff] hover:bg-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
             >
               Save Final To 4090

@@ -19,7 +19,8 @@ export default function NavBar() {
                     Scans
                 </NavLink>
             </div>
-            <div>Username
+            <div className='flex items-center gap-x-4'>
+                Username
                 <ThemeToggle/>
             </div>
             </div>
