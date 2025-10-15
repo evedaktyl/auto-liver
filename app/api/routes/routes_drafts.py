@@ -190,7 +190,7 @@ def save_all(draft_id: str):
     results = []
     for it in meta.get("items") or []:
         mask = Path(it["mask_path"]) if it.get("mask_path") else None
-        # you can choose to only save segmented items, or also save raw scans
+        
         if mask and mask.exists():
             saved = save_item_to_scans_store(Path(it["path"]), mask, it["segmented"], meta.get("scan_type", "CT"))
             results.append(saved["scan_id"])
@@ -202,7 +202,7 @@ def put_mask_slice(
   item: str | None = Query(None),
   plane: str = Query(..., regex="^(axial|coronal|sagittal)$"),
   index: int = Query(..., ge=0),
-  png: UploadFile = File(...),   # image/png of the slice (red overlay not required; we use alpha/white)
+  png: UploadFile = File(...),   # image/png of the slice (red overlay not required; use alpha/white)
 ):
   meta = _load_meta(draft_id)
   it = _get_item(meta, item)
