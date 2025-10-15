@@ -6,27 +6,27 @@
   "items": [
     {
       "item_id": "I001",
-      "path": "/Users/evedaktyl/Documents/holomedicine/autoliver/workspace/5CE541FF/0001_0000.nii.gz",
+      "path": "/Users/HOLOMED-1/documents/evelyn/demo/auto-liver/workspace/5CE541FF/0001_0000.nii.gz",
       "original_filename": "0001_0000.nii.gz",
       "stored_filename": "0001_0000.nii.gz",
       "segmented": true,
-      "mask_path": "/Users/evedaktyl/Documents/holomedicine/autoliver/workspace/5CE541FF/0001_0000_mask.nii.gz"
+      "mask_path": "/Users/HOLOMED-1/documents/evelyn/demo/auto-liver/workspace/5CE541FF/0001_0000_mask.nii.gz"
     },
     {
       "item_id": "I002",
-      "path": "/Users/evedaktyl/Documents/holomedicine/autoliver/workspace/5CE541FF/0002_0000.nii.gz",
+      "path": "/Users/HOLOMED-1/documents/evelyn/demo/auto-liver/workspace/5CE541FF/0002_0000.nii.gz",
       "original_filename": "0002_0000.nii.gz",
       "stored_filename": "0002_0000.nii.gz",
       "segmented": true,
-      "mask_path": "/Users/evedaktyl/Documents/holomedicine/autoliver/workspace/5CE541FF/0002_0000_mask.nii.gz"
+      "mask_path": "/Users/HOLOMED-1/documents/evelyn/demo/auto-liver/workspace/5CE541FF/0002_0000_mask.nii.gz"
     },
     {
       "item_id": "I003",
-      "path": "/Users/evedaktyl/Documents/holomedicine/autoliver/workspace/5CE541FF/0003_0000.nii.gz",
+      "path": "/Users/HOLOMED-1/documents/evelyn/demo/auto-liver/workspace/5CE541FF/0003_0000.nii.gz",
       "original_filename": "0003_0000.nii.gz",
       "stored_filename": "0003_0000.nii.gz",
       "segmented": true,
-      "mask_path": "/Users/evedaktyl/Documents/holomedicine/autoliver/workspace/5CE541FF/0003_0000_mask.nii.gz"
+      "mask_path": "/Users/HOLOMED-1/documents/evelyn/demo/auto-liver/workspace/5CE541FF/0003_0000_mask.nii.gz"
     }
   ],
   "created_at": "2025-10-06T06:44:27.763679Z"
