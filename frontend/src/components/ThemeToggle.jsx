@@ -16,7 +16,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setDark(!dark)}
-      className={dark ? "px-3 py-1 rounded bg-background-900 text-dark-text" : "px-3 py-1 rounded bg-background-50 text-text-900"}
+      className={dark ? "px-3 py-1 rounded bg-background-900 text-dark-text border border-transparent hover:border-gray-900" : "px-3 py-1 rounded bg-background-50 text-text-900 border border-transparent hover:border-gray-900"}
     >
       <img
         src={dark ? "/image.png" : "/night-mode.png"}

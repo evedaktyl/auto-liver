@@ -123,19 +123,19 @@ export default function Upload() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex justify-between gap-3">
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="px-4 py-2 border rounded"
+          >
+            Choose Files
+          </button>
           <button
             onClick={handleUseSample}
             title="Demo mode uses sample scans"
             className="px-4 py-2 rounded text-white bg-accent-500 dark:bg-dark-accent"
           >
             Use Sample Scans
-          </button>
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="px-4 py-2 border rounded"
-          >
-            Choose Files
           </button>
         </div>
 

@@ -146,7 +146,7 @@ export default function Drafts() {
                 </div>
                 <button
                   onClick={() => deleteDraft(d.draft_id)}
-                  className="px-3 py-2 border rounded"
+                  className="px-3 py-2 border rounded border-gray-300 text-gray-300"
                   disabled>
                   Clear
                 </button>

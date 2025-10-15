@@ -40,7 +40,8 @@ export default function DraftDetail() {
   const [isEdited, setIsEdited] = useState(false);
 
   // Status
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState({});
+  const [isSegmented, setIsSegmented] = useState({});
 
   // Load draft meta
   useEffect(() => {
@@ -49,6 +50,13 @@ export default function DraftDetail() {
       if (!r.ok) return;
       const m = await r.json();
       setMeta(m);
+
+      const initialSegmentation = {};
+      for(const item of m.items || []) {
+        initialSegmentation[item.item_id] = false;
+      }
+      setIsSegmented(initialSegmentation);
+
       const first = m.items?.[0]?.item_id;
       setSelectedItem(first || null);
     })();
@@ -190,7 +198,8 @@ export default function DraftDetail() {
 
   const segmentOne = async () => {
     if (!selectedItem) return;
-    setIsLoading(true);
+    setIsLoading(prev => ({...prev, [selectedItem]: true}));
+    setIsSegmented(prev => ({...prev, [selectedItem]: true}));
     await fetch(`${API}/drafts/${draftId}/segment?item=${selectedItem}`, { method: "POST" });
     // refresh current mask slices
     await clearEdits();
@@ -198,7 +207,7 @@ export default function DraftDetail() {
     await fetchMaskSlice("coronal", idx.coronal);
     await fetchMaskSlice("sagittal", idx.sagittal);
     
-    setIsLoading(false);
+    setIsLoading(prev => ({...prev, [selectedItem]: false}));
 
     const r = await fetch(`${API}/drafts/${draftId}`);
     if (!r.ok) return;
@@ -231,7 +240,7 @@ export default function DraftDetail() {
                 onClick={() => setSelectedItem(it.item_id)}
                 className={`w-full text-left px-2 py-1 rounded ${selectedItem===it.item_id ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400" : "hover:border-gray"}`}
               >
-                {it.item_id} · {it.segmented ? "segmented" : "unsegmented"}
+                {it.item_id} · {isSegmented[it.item_id] ? "segmented" : "unsegmented"}
               </button>
             </li>
           ))}
@@ -243,7 +252,7 @@ export default function DraftDetail() {
             type="checkbox"
             checked={editMode}
             onChange={(e)=>setEditMode(e.target.checked)}
-            disabled={isLoading}
+            disabled={isLoading[selectedItem]}
           />
           Edit mask (axial)
         </label>
@@ -280,7 +289,7 @@ export default function DraftDetail() {
         <button
           id="clearEditsButton"
           onClick={clearEdits}
-          disabled={!isEdited || isLoading}
+          disabled={!isEdited || isLoading[selectedItem]}
           className="w-full px-3 py-2 rounded bg-[#5f9ea0] text-[#080808] disabled:bg-background-200 disabled:text-gray-500"
         >
           Clear Edits
@@ -318,7 +327,7 @@ export default function DraftDetail() {
               </div>
             )}
 
-            {isLoading && (
+            {isLoading[selectedItem] && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-white"></div>
               </div>
@@ -343,20 +352,21 @@ export default function DraftDetail() {
           <div className="col-span-5 mt-2 flex items-center gap-4">
             <button
               onClick={segmentOne}
-              disabled={isLoading}
+              disabled={isLoading[selectedItem]}
               className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5] disabled:bg-background-200 disabled:text-gray-500"
             >
               Run TotalSegmentator
             </button>
             <button
               onClick={saveDraft}
-              disabled={isLoading}
+              disabled={isLoading[selectedItem]}
               className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5] disabled:bg-background-200 disabled:text-gray-500"
             >
               Save draft
             </button>
             <button
               onClick={saveFinal}
+              disabled={isLoading[selectedItem]}
               className="hidden px-3 py-2 rounded text-[#080808] bg-[#dcdcdcff] hover:bg-gray-300 disabled:bg-gray-300 disabled:text-gray-500"
             >
               Save Final
@@ -400,7 +410,7 @@ export default function DraftDetail() {
               />
             )}
 
-            {isLoading && (
+            {isLoading[selectedItem] && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-white"></div>
               </div>
@@ -424,7 +434,7 @@ export default function DraftDetail() {
               />
             )}
 
-            {isLoading && (
+            {isLoading[selectedItem] && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-white"></div>
               </div>
