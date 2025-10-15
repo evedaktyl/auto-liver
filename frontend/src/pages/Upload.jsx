@@ -23,6 +23,23 @@ export default function Upload() {
     setFiles(dropped);
   };
 
+  const openDirectoryPicker = async () => {
+    try {
+      const directoryHandle = await window.showDirectoryPicker();
+
+      // console.log('Selected directory:', directoryHandle.name);
+
+      // setFiles(directoryHandle.values());
+      // for await (const entry of directoryHandle.values()) {
+      //   console.log(entry.name, entry.kind);
+      // }
+
+    } catch (err) {
+      // Handle potential errors, such as the user dismissing the picker
+      console.error('Error opening directory picker:', err);
+    }
+}
+
   const clearFiles = () => setFiles([]);
 
   const handleSubmit = async () => {
@@ -43,6 +60,7 @@ export default function Upload() {
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       const data = await res.json();
       setStatus("Uploaded. Redirecting…");
+      // set scantype (infer from scan)
       navigate(`/drafts/${data.draft_id}`);
     } catch (err) {
       console.error(err);
@@ -117,18 +135,25 @@ export default function Upload() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex justify-between">
+          <div className="flex gap-x-3">
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="px-4 py-2 border rounded border-gray-900 hover:border-gray-900/20 dark:border-gray-50 "
+          >
+            Choose File(s)
+          </button>
+          <button
+            onClick={openDirectoryPicker}
+            className="px-4 py-2 border rounded border-gray-900 hover:border-gray-900/20 dark:border-gray-50">
+            Choose Directory
+          </button>
+          </div>
           <button
             onClick={handleSubmit}
             className="px-4 py-2 rounded text-white bg-accent-500 dark:bg-dark-accent"
           >
             Upload
-          </button>
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="px-4 py-2 border rounded"
-          >
-            Choose Files
           </button>
         </div>
 
