@@ -51,11 +51,24 @@ export default function Upload() {
     }
   };
 
-  const handleUseSample = () => {
-    setStatus("Uploaded. Redirecting...");
-    navigate(`/drafts/5CE541FF`);
-  }
+  // const handleUseSample = () => {
+  //   setStatus("Uploaded. Redirecting...");
+  //   navigate(`/drafts/5CE541FF`);
+  // }
 
+  const handleUseSample = async () => {
+    setStatus("Preparing demo data…");
+    try {
+      const res = await fetch(`${API}/drafts/demo-copy`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to create demo copy");
+      const data = await res.json();
+      setStatus("Loaded demo data. Redirecting…");
+      navigate(`/drafts/${data.draft_id}`);
+    } catch (err) {
+      console.error(err);
+      setStatus("Demo failed to load.");
+    }
+  };
   return (
     <div className="min-h-screen flex flex-col items-center space-y-6 py-10">
       <h2 className="text-2xl text-text-900 dark:text-dark-text">Upload Scans</h2>
