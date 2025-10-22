@@ -1,3 +1,4 @@
+import shutil
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pathlib import Path
@@ -10,7 +11,7 @@ from app.services.file_handler import delete_draft
 from app.services.segment import segment
 from app.services.slice_png import slice_to_png_bytes, mask_to_rgba_png_bytes
 from app.services.store import save_item_to_scans_store
-from app.api.routes.routes_uploads import clean_stem
+from app.api.routes.routes_uploads import clean_stem, short_id
 from app.models.scan import MaskPayload
 
 WORKSPACE_DIR = Path("workspace")
@@ -237,3 +238,23 @@ def delete(draft_id: str):
     dir_to_del = WORKSPACE_DIR / draft_id
     delete_draft(dir_to_del)
     return {"message": "deleted"}
+
+def create_demo_copy():
+    src = WORKSPACE_DIR / "5CE541FF"
+    if not src.exists():
+        raise HTTPException(500, "Sample draft missing")
+
+    new_id = short_id(8)
+    dest = WORKSPACE_DIR / new_id
+
+    shutil.copytree(src, dest)
+
+    meta_path = dest / "meta.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta["draft_id"] = new_id
+
+    for it in meta.get("items", []):
+        it["segmented"] = False
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    return {"draft_id": new_id}

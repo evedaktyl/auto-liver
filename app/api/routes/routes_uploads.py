@@ -2,9 +2,14 @@ from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pathlib import Path
 from datetime import datetime
-import shutil, uuid, json
+import shutil
+import uuid
+import json
 
-WORKSPACE_DIR = Path("workspace")
+external = Path(__file__).resolve().parents[2] / "workspace"
+internal = Path(__file__).resolve().parents[1] / "workspace"
+WORKSPACE_DIR = external if external.exists() else internal
+# WORKSPACE_DIR = Path("workspace")
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
