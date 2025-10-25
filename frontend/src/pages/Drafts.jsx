@@ -136,17 +136,17 @@ export default function Drafts() {
                 >
                   {state === "running" ? "Segmenting…" : "Segment All"}
                 </button>
-                <button
+                {/* <button
                   onClick={() => saveAllInDraft(d.draft_id)}
                   className="px-3 py-2 border rounded"
                   disabled
                 >
                   Save All
-                </button>
+                </button> */}
                 </div>
                 <button
                   onClick={() => deleteDraft(d.draft_id)}
-                  className="px-3 py-2 border rounded border-gray-300 text-gray-300">
+                  className="px-3 py-2 border rounded border-text-900 text-text-900 hover:border-text-300 dark:border-background-50 dark:text-background-50">
                   Clear
                 </button>
               </div>
