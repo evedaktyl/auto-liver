@@ -192,7 +192,7 @@ export default function DraftDetail() {
   const segmentOne = async () => {
     if (!selectedItem) return;
     setIsLoading(prev => ({...prev, [selectedItem]: true}));
-    await fetch(`${API}/drafts/${draftId}/segment?item=${selectedItem}`, { method: "POST" });
+    await fetch(`${API}/drafts/${draftId}/segment/demo?item=${selectedItem}`, { method: "POST" });
     // refresh current mask slices
     await clearEdits();
     await fetchMaskSlice("axial", idx.axial);

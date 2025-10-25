@@ -82,8 +82,9 @@ def upload_demo():
     draft_dir.mkdir(parents=True, exist_ok=True)
 
     items = []
-    sample_files = list(SAMPLE_DIR.glob("*.nii.gz"))
-    for i, f in enumerate(sample_files):
+    sample_scan_dir = SAMPLE_DIR / "scans"
+    sample_scan_files = list(sample_scan_dir.glob("*.nii.gz"))
+    for i, f in enumerate(sample_scan_files):
         dest = unique_dest(draft_dir, f.name)
         # Copy sample file 
         shutil.copy(f, dest)

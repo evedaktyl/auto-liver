@@ -37,7 +37,7 @@ export default function Drafts() {
     for (let i = 0; i < todo.length; i++) {
       const it = todo[i];
       try {
-        const r = await fetch(`${API}/drafts/${draftId}/segment?item=${encodeURIComponent(it.item_id)}`, { method: "POST" });
+        const r = await fetch(`${API}/drafts/${draftId}/segment/demo?item=${encodeURIComponent(it.item_id)}`, { method: "POST" });
         if (!r.ok) throw new Error();
         setProgress(p => ({ ...p, [draftId]: { done: i+1, total: todo.length, state: "running" } }));
       } catch {

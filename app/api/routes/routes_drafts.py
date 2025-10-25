@@ -19,6 +19,7 @@ from models.scan import MaskPayload
 # WORKSPACE_DIR = external if external.exists() else internal
 # WORKSPACE_DIR = Path("workspace")
 WORKSPACE_DIR = Path(__file__).resolve().parents[2] / "workspace"
+SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample"
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
     
 def _meta_path(draft_id: str) -> Path:
@@ -179,6 +180,27 @@ def segment_one(draft_id: str, item: str | None = Query(None)):
     it["mask_path"] = str(Path(out_path).resolve())
     _save_meta(draft_id, meta)
     return {"message": "ok", "mask_path": it["mask_path"]}
+
+@router.post("/{draft_id}/segment/demo")
+def segment_demo(draft_id: str, item: str | None = Query(None)):
+    meta = _load_meta(draft_id)
+    it = _get_item(meta, item)
+
+    draft_dir = _meta_path(draft_id).parent
+    stem = clean_stem(Path(it["stored_filename"])) if it.get("stored_filename") else clean_stem(Path(it["path"]))
+    mask_path = draft_dir / f"{stem}_mask.nii.gz"
+    
+    sample_mask_dir = SAMPLE_DIR / "masks"
+    sample_mask_files = list(sample_mask_dir.glob("*.nii.gz"))
+    for i, f in enumerate(sample_mask_files):
+        if f == mask_path:
+            shutil.copy(f, mask_path)
+
+    it["segmented"] = True
+    it["mask_path"] = str(Path(mask_path).resolve())
+    _save_meta(draft_id, meta)
+    return {"message": "ok", "mask_path": it["mask_path"]}
+    
 
 @router.post("/{draft_id}/save")
 def save_selected(draft_id: str, item: str | None = Query(None)):
