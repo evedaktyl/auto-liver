@@ -193,7 +193,7 @@ def segment_demo(draft_id: str, item: str | None = Query(None)):
     sample_mask_dir = SAMPLE_DIR / "masks"
     sample_mask_files = list(sample_mask_dir.glob("*.nii.gz"))
     for i, f in enumerate(sample_mask_files):
-        if f == f"{stem}_mask.nii.gz":
+        if f.name == f"{stem}_mask.nii.gz":
             shutil.copy(f, mask_path)
 
     it["segmented"] = True
