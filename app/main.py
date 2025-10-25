@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes.routes_scans import router as scans_router
-from app.api.routes.routes_uploads import router as uploads_router
-from app.api.routes.routes_drafts import router as drafts_router
+from api.routes.routes_scans import router as scans_router
+from api.routes.routes_uploads import router as uploads_router
+from api.routes.routes_drafts import router as drafts_router
 
 
 app = FastAPI(

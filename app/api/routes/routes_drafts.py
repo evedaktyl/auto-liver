@@ -7,12 +7,12 @@ import nibabel as nib
 import numpy as np
 from PIL import Image
 
-from app.services.file_handler import delete_draft
-from app.services.segment import segment
-from app.services.slice_png import slice_to_png_bytes, mask_to_rgba_png_bytes
-from app.services.store import save_item_to_scans_store
-from app.api.routes.routes_uploads import clean_stem, short_id
-from app.models.scan import MaskPayload
+from services.file_handler import delete_draft
+from services.segment import segment
+from services.slice_png import slice_to_png_bytes, mask_to_rgba_png_bytes
+from services.store import save_item_to_scans_store
+from api.routes.routes_uploads import clean_stem, short_id
+from models.scan import MaskPayload
 
 # external = Path(__file__).resolve().parents[2] / "workspace"
 # internal = Path(__file__).resolve().parents[1] / "workspace"

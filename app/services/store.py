@@ -1,7 +1,7 @@
 from pathlib import Path
 import shutil, json
 from datetime import datetime
-from app.services.id_generator import get_next_scan_id
+from services.id_generator import get_next_scan_id
 import os
 
 SCANS_DIR = Path("data/scans")

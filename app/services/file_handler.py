@@ -7,7 +7,7 @@ from pydicom.misc import is_dicom
 import nibabel as nib
 import tempfile, os, json
 
-from app.services.id_generator import get_next_scan_id
+from services.id_generator import get_next_scan_id
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCANS_DIR = PROJECT_ROOT / "data" / "scans"
