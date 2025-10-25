@@ -80,7 +80,7 @@ export default function Drafts() {
       </div>
 
       {drafts.length === 0 && (
-        <div className="p-4 border rounded bg-gray-50">No drafts yet.</div>
+        <div className="p-4 border rounded bg-gray-50 dark:bg-background-500">No drafts yet.</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
