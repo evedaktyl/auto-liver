@@ -6,10 +6,12 @@ import shutil
 import uuid
 import json
 
-external = Path(__file__).resolve().parents[2] / "workspace"
-internal = Path(__file__).resolve().parents[1] / "workspace"
-WORKSPACE_DIR = external if external.exists() else internal
+# external = Path(__file__).resolve().parents[2] / "workspace"
+# internal = Path(__file__).resolve().parents[1] / "workspace"
+# WORKSPACE_DIR = external if external.exists() else internal
 # WORKSPACE_DIR = Path("workspace")
+WORKSPACE_DIR = Path(__file__).resolve().parents[2] / "workspace"
+SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample"
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -70,3 +72,39 @@ async def upload_scan(
     (draft_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
     return JSONResponse({"message": "Uploaded", "draft_id": draft_id})
+
+SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample"
+
+@router.post("/demo")
+def upload_demo():
+    draft_id = short_id(8)
+    draft_dir = WORKSPACE_DIR / draft_id
+    draft_dir.mkdir(parents=True, exist_ok=True)
+
+    items = []
+    sample_files = list(SAMPLE_DIR.glob("*.nii.gz"))
+    for i, f in enumerate(sample_files):
+        dest = unique_dest(draft_dir, f.name)
+        # Copy sample file 
+        shutil.copy(f, dest)
+        items.append({
+            "item_id": f"I{i+1:03d}",
+            "path": str(dest.resolve()),
+            "original_filename": f.name,
+            "stored_filename": dest.name,
+            "segmented": False,
+            "mask_path": None,
+        })
+
+    meta = {
+        "draft_id": draft_id,
+        "title": "Demo Draft",
+        "scan_type": "MRI",
+        "segmented": False,
+        "items": items,
+        "created_at": datetime.utcnow().isoformat() + "Z",
+    }
+
+    (draft_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    return JSONResponse({"message": "Demo uploaded", "draft_id": draft_id})

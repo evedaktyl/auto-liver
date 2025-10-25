@@ -14,7 +14,11 @@ from app.services.store import save_item_to_scans_store
 from app.api.routes.routes_uploads import clean_stem, short_id
 from app.models.scan import MaskPayload
 
-WORKSPACE_DIR = Path("workspace")
+# external = Path(__file__).resolve().parents[2] / "workspace"
+# internal = Path(__file__).resolve().parents[1] / "workspace"
+# WORKSPACE_DIR = external if external.exists() else internal
+# WORKSPACE_DIR = Path("workspace")
+WORKSPACE_DIR = Path(__file__).resolve().parents[2] / "workspace"
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
     
 def _meta_path(draft_id: str) -> Path:
@@ -239,6 +243,7 @@ def delete(draft_id: str):
     delete_draft(dir_to_del)
     return {"message": "deleted"}
 
+@router.post("/demo-copy")
 def create_demo_copy():
     src = WORKSPACE_DIR / "5CE541FF"
     if not src.exists():
