@@ -9,7 +9,7 @@ import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
 
 // const API="http://localhost:8000";
-const API = "https://presenting-opposition-answers-attention.trycloudflare.com";
+const API = "https://auto-liver-backend.onrender.com";
 
 const PLANES = ["axial", "coronal", "sagittal"];
 
@@ -41,7 +41,6 @@ export default function DraftDetail() {
 
   // Status
   const [isLoading, setIsLoading] = useState({});
-  const [isSegmented, setIsSegmented] = useState({});
 
   // Load draft meta
   useEffect(() => {
@@ -50,12 +49,6 @@ export default function DraftDetail() {
       if (!r.ok) return;
       const m = await r.json();
       setMeta(m);
-
-      const initialSegmentation = {};
-      for(const item of m.items || []) {
-        initialSegmentation[item.item_id] = false;
-      }
-      setIsSegmented(initialSegmentation);
 
       const first = m.items?.[0]?.item_id;
       setSelectedItem(first || null);
@@ -199,7 +192,6 @@ export default function DraftDetail() {
   const segmentOne = async () => {
     if (!selectedItem) return;
     setIsLoading(prev => ({...prev, [selectedItem]: true}));
-    setIsSegmented(prev => ({...prev, [selectedItem]: true}));
     await fetch(`${API}/drafts/${draftId}/segment?item=${selectedItem}`, { method: "POST" });
     // refresh current mask slices
     await clearEdits();
@@ -240,7 +232,7 @@ export default function DraftDetail() {
                 onClick={() => setSelectedItem(it.item_id)}
                 className={`w-full text-left px-2 py-1 rounded ${selectedItem===it.item_id ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400" : "hover:border-gray"}`}
               >
-                {it.item_id} · {isSegmented[it.item_id] ? "segmented" : "unsegmented"}
+                {it.item_id} · {it.segmented ? "segmented" : "unsegmented"}
               </button>
             </li>
           ))}

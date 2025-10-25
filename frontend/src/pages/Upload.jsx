@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 // const API = "http://localhost:8000";
-const API = "https://presenting-opposition-answers-attention.trycloudflare.com";
+const API = "https://auto-liver-backend.onrender.com";
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -51,16 +51,12 @@ export default function Upload() {
     }
   };
 
-  // const handleUseSample = () => {
-  //   setStatus("Uploaded. Redirecting...");
-  //   navigate(`/drafts/5CE541FF`);
-  // }
-
   const handleUseSample = async () => {
     setStatus("Preparing demo data…");
     try {
-      const res = await fetch(`${API}/drafts/demo-copy`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to create demo copy");
+      const res = await fetch(`${API}/uploads/demo`, { method: "POST" })
+
+      if (!res.ok) throw new Error(`Demo upload failed (${res.status})`);
       const data = await res.json();
       setStatus("Loaded demo data. Redirecting…");
       navigate(`/drafts/${data.draft_id}`);
@@ -87,7 +83,7 @@ export default function Upload() {
             <p className="text-sm text-gray-700 dark:text-gray-100">
               <span className="font-semibold">Click to select</span> or drag & drop
             </p>
-            <p className="text-xs text-gray-400">NIfTI (.nii, .nii.gz), DICOM (.dcm, no ext). Multiple files allowed.</p>
+            <p className="text-xs text-gray-400">NIfTI (.nii, .nii.gz), DICOM (.dcm). Multiple files allowed.</p>
           </div>
           <input
             id="file-input"
