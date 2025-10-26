@@ -73,9 +73,11 @@ export default function DraftDetail() {
       };
       setIdx(mid);
 
+      setIsLoading(prev => ({...prev, [selectedItem]: true}));
       fetchSlice("axial", mid.axial);
       fetchSlice("coronal", mid.coronal);
       fetchSlice("sagittal", mid.sagittal);
+      setIsLoading(prev => ({...prev, [selectedItem]: false}));
       fetchMaskSlice("axial", mid.axial);
       fetchMaskSlice("coronal", mid.coronal);
       fetchMaskSlice("sagittal", mid.sagittal);
@@ -88,12 +90,12 @@ export default function DraftDetail() {
       setImgBlobs((s) => ({ ...s, [plane]: cacheImg.current.get(key) }));
       return;
     }
-    setIsLoading(prev => ({...prev, [selectedItem]: true}));
+
     const url = `${API}/drafts/${draftId}/slice.png?item=${selectedItem}&plane=${plane}&index=${index}`;
     const r = await fetch(url);
     const b = await r.blob();
     cacheImg.current.set(key, b);
-    setIsLoading(prev => ({...prev, [selectedItem]: false}));
+    
     setImgBlobs((s) => ({ ...s, [plane]: b }));
 
     // Get axial view width and height once
