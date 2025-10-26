@@ -88,10 +88,12 @@ export default function DraftDetail() {
       setImgBlobs((s) => ({ ...s, [plane]: cacheImg.current.get(key) }));
       return;
     }
+    setIsLoading(prev => ({...prev, [selectedItem]: true}));
     const url = `${API}/drafts/${draftId}/slice.png?item=${selectedItem}&plane=${plane}&index=${index}`;
     const r = await fetch(url);
     const b = await r.blob();
     cacheImg.current.set(key, b);
+    setIsLoading(prev => ({...prev, [selectedItem]: false}));
     setImgBlobs((s) => ({ ...s, [plane]: b }));
 
     // Get axial view width and height once
