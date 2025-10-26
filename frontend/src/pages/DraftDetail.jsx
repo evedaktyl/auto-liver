@@ -73,14 +73,18 @@ export default function DraftDetail() {
       };
       setIdx(mid);
 
-      setIsLoading(prev => ({...prev, [selectedItem]: true}));
-      fetchSlice("axial", mid.axial);
-      fetchSlice("coronal", mid.coronal);
-      fetchSlice("sagittal", mid.sagittal);
-      setIsLoading(prev => ({...prev, [selectedItem]: false}));
-      fetchMaskSlice("axial", mid.axial);
-      fetchMaskSlice("coronal", mid.coronal);
-      fetchMaskSlice("sagittal", mid.sagittal);
+      setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
+
+      await Promise.all([
+        fetchSlice("axial", mid.axial),
+        fetchSlice("coronal", mid.coronal),
+        fetchSlice("sagittal", mid.sagittal),
+        fetchMaskSlice("axial", mid.axial),
+        fetchMaskSlice("coronal", mid.coronal),
+        fetchMaskSlice("sagittal", mid.sagittal),
+      ]);
+
+      setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
     })();
   }, [selectedItem]);
 
