@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 import ScanCanvas from "../components/ScanCanvas";
 import MaskCanvas from "../components/MaskCanvas";
+import { inflate } from "pako";
 
-const API = "https://blake-worcester-humanities-felt.trycloudflare.com";
+const API = "http://localhost:8000";
 const PLANES = ["axial", "coronal", "sagittal"];
 
 export default function DraftDetail() {
@@ -24,13 +25,13 @@ export default function DraftDetail() {
 
   const cacheImg = useRef(new Map());
   const cacheMask = useRef(new Map());
+  const cacheScan = useRef(new Map());
 
   // Brush tool
   const [editMode, setEditMode] = useState(false);
   const [brushMode, setBrushMode] = useState("brush"); 
   const [brushSize, setBrushSize] = useState(8);
   const brushRef = useRef(null);
-  const [axialSize, setAxialSize] = useState({w: 0, h: 0});
   const maskRef = useRef(null);
   const [isEdited, setIsEdited] = useState(false);
 
@@ -50,51 +51,152 @@ export default function DraftDetail() {
     })();
   }, [draftId]);
 
-  // Get shape and fetch middle slices of the selected item
+  // Get scan shape + flattened volume
   useEffect(() => {
     if (!selectedItem) return;
-    (async () => {
-      const r = await fetch(`${API}/drafts/${draftId}/item-shape?item=${selectedItem}`);
-      if (!r.ok) return;
 
-      const serverShape = await r.json();
-      setShape(serverShape.shape);
-
-      const [x, y, z] = serverShape.shape;
-      const mid = {
-          axial: Math.floor(z / 2),
-          coronal: Math.floor(y / 2),
-          sagittal: Math.floor(x / 2),
-      };
-      setIdx(mid);
-
-      fetchSlice("axial", mid.axial);
-      fetchSlice("coronal", mid.coronal);
-      fetchSlice("sagittal", mid.sagittal);
-      fetchMaskSlice("axial", mid.axial);
-      fetchMaskSlice("coronal", mid.coronal);
-      fetchMaskSlice("sagittal", mid.sagittal);
-    })();
-  }, [selectedItem]);
-
-  const fetchSlice = async (plane, index) => {
-    const key = `${selectedItem}:${plane}:${index}`;
-    if (cacheImg.current.has(key)) {
-      setImgBlobs((s) => ({ ...s, [plane]: cacheImg.current.get(key) }));
+    const key = `${draftId}:${selectedItem}`;
+    if (cacheScan.current.has(key)) {
+      const { shape } = cacheScan.current.get(key);
+      setShape(shape);
+      setIdx({
+        axial: Math.floor(shape[2] / 2),
+        coronal: Math.floor(shape[1] / 2),
+        sagittal: Math.floor(shape[0] / 2),
+      });
       return;
     }
-    const url = `${API}/drafts/${draftId}/slice.png?item=${selectedItem}&plane=${plane}&index=${index}`;
-    const r = await fetch(url);
-    const b = await r.blob();
-    cacheImg.current.set(key, b);
-    setImgBlobs((s) => ({ ...s, [plane]: b }));
 
-    // Get axial view width and height once
-    if (plane === "axial" && axialSize.w === 0) {
-      const bmp = await createImageBitmap(b);
-      setAxialSize({ w: bmp.width, h: bmp.height });
+    setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
+    (async () => {
+      const r = await fetch(`${API}/drafts/${draftId}/scan-full?item=${selectedItem}`);
+      if (!r.ok) return;
+
+      const raw = new Uint8Array(await r.arrayBuffer());
+      const header = new Int32Array(raw.buffer, 0, 3);
+      const [X, Y, Z] = header;
+      const shape = [X, Y, Z];
+      setShape(shape);
+      setIdx({
+        axial: Math.floor(Z / 2),
+        coronal: Math.floor(Y / 2),
+        sagittal: Math.floor(X / 2),
+      });
+
+      const volume = new Float32Array(inflate(raw.subarray(12)).buffer);
+      cacheScan.current.set(key, { shape, volume });
+    })();
+    setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
+  }, [selectedItem]);
+
+  // Load slices
+  useEffect(() => {
+    if (!idx || !selectedItem) return;
+
+    const key = `${draftId}:${selectedItem}`;
+    const scan = cacheScan.current.get(key);
+    if (!scan) return;
+
+    const { shape, volume } = scan;
+    const [X, Y, Z] = shape;
+
+    const loadSlice = async (plane, index) => {
+      const sliceKey = `${selectedItem}:${plane}:${index}`;
+
+      if (cacheImg.current.has(sliceKey)) {
+        setImgBlobs(s => ({ ...s, [plane]: cacheImg.current.get(sliceKey) }));
+        return;
+      }
+
+      setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
+      let slice;
+      if (plane == "axial") {
+        slice = getAxial(volume, shape, index);
+      } else if (plane == "coronal") {
+        slice = getCoronal(volume,  shape, index);
+      } else {
+        slice = getSagittal(volume, shape, index);
+      }
+      const width  = plane === "axial" ? Y : Z;
+      const height = plane === "axial" ? X : X; 
+
+
+      const blob = await floatSliceToPngBlob(slice, width, height);
+      cacheImg.current.set(sliceKey, blob);
+      setImgBlobs(s => ({ ...s, [plane]: blob }));
+    };
+
+    loadSlice("axial", idx.axial);
+    loadSlice("coronal", idx.coronal);
+    loadSlice("sagittal", idx.sagittal);
+    setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
+  }, [idx, selectedItem]);
+
+  function getAxial(volume, [X, Y, Z], z) {
+    const out = new Float32Array(X * Y);
+    let k = 0;
+    for (let x = 0; x < X; x++)
+      for (let y = 0; y < Y; y++)
+        out[k++] = volume[(x * Y + y) * Z + z];
+    console.log(volume);
+    return out;
+  }
+
+  function getCoronal(volume, [X, Y, Z], y) {
+    const out = new Float32Array(X * Z);
+    let k = 0;
+    for (let x = 0; x < X; x++)
+      for (let z = 0; z < Z; z++)
+        out[k++] = volume[(x * Y + y) * Z + z];
+    return out;
+  }
+
+  function getSagittal(volume, [X, Y, Z], x) {
+    const out = new Float32Array(Y * Z);
+    let k = 0;
+    for (let y = 0; y < Y; y++)
+      for (let z = 0; z < Z; z++)
+        out[k++] = volume[(x * Y + y) * Z + z];
+    return out;
+  }
+
+  function floatSliceToPngBlob(slice, width, height) {
+    // Normalize slice to [0, 255]
+    const arr = new Uint8ClampedArray(width * height);
+    let min = Infinity, max = -Infinity;
+
+    for (let i = 0; i < slice.length; i++) {
+      const v = slice[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
     }
-  };
+    const range = max - min || 1;
+
+    for (let i = 0; i < slice.length; i++) {
+      arr[i] = ((slice[i] - min) / range) * 255;
+    }
+
+    // Convert grayscale to ImageData
+    const rgba = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < arr.length; i++) {
+      const v = arr[i];
+      rgba[i * 4 + 0] = v;
+      rgba[i * 4 + 1] = v;
+      rgba[i * 4 + 2] = v;
+      rgba[i * 4 + 3] = 255;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    const imgData = new ImageData(rgba, width, height);
+    ctx.putImageData(imgData, 0, 0);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/png");
+    });
+  }
 
   const fetchMaskSlice = async (plane, index) => {
     const key = `${selectedItem}:${plane}:${index}`;
@@ -113,8 +215,6 @@ export default function DraftDetail() {
   const onSlide = (plane) => async (e) => {
     const v = Number(e.target.value);
     setIdx((s) => ({ ...s, [plane]: v }));
-    await fetchSlice(plane, v);
-    if (showMask) await fetchMaskSlice(plane, v);
   };
 
   const saveDraft = async () => {

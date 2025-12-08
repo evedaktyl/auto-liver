@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pathlib import Path
 import json, io
 import nibabel as nib
 import numpy as np
 from PIL import Image
+import zlib
 
 from app.services.file_handler import delete_draft
 from app.services.segment import segment
@@ -59,6 +60,50 @@ def get_item_shape(
     img = nib.load(it["path"])
     x, y, z = img.shape
     return {"shape": [x, y, z]}
+
+@router.get("/{draft_id}/scan")
+def get_scan(
+    draft_id: str,
+    item: str | None = Query(None),
+):
+    meta = _load_meta(draft_id)
+    it = _get_item(meta, item)
+    img = nib.load(it["path"])
+    
+    arr = np.asarray(img.dataobj, dtype=np.float32)
+    arr = np.rot90(arr, axes=(0, 1))
+
+    arr_bytes = arr.tobytes(order="C")
+    compressed = zlib.compress(arr_bytes, level=6)
+
+    return Response(
+        content=compressed,
+        media_type="application/octet-stream"
+    )
+
+@router.get("/{draft_id}/scan-full")
+def get_scan_full(
+    draft_id: str,
+    item: str | None = Query(None),
+):
+    meta = _load_meta(draft_id)
+    it = _get_item(meta, item)
+
+    img = nib.load(it["path"])
+    arr = np.asarray(img.dataobj, dtype=np.float32)
+    arr = np.rot90(arr, axes=(0, 1))
+    arr = np.ascontiguousarray(arr)
+
+    X, Y, Z = arr.shape
+
+    header = np.array([X, Y, Z], dtype=np.int32).tobytes()
+    compressed = zlib.compress(arr.tobytes(order="C"), level=6)
+    payload = header + compressed
+
+    return Response(
+        content=payload,
+        media_type="application/octet-stream"
+    )
 
 @router.get("/{draft_id}/slice.png")
 def slice_png(
@@ -129,34 +174,6 @@ def mask_slice_png(
         sl = np.rot90(np.asarray(mimg.dataobj[index, :, :]) > 0)
     png = mask_to_rgba_png_bytes(sl, color="FF0000", alpha=alpha)
     return StreamingResponse(io.BytesIO(png), media_type="image/png")
-
-# @router.get("/{draft_id}/mask/array")
-# def get_mask_array(draft_id: str, item: str | None = None):
-#     meta = _load_meta(draft_id)
-#     it = _get_item(meta, item)
-#     mask_path = _ensure_mask(meta, it)
-
-#     mimg = nib.load(str(mask_path))
-#     arr = np.asarray(mimg.dataobj, dtype=np.uint8)
-#     shape = arr.shape
-#     flat = arr.flatten().tolist()
-
-#     return {"shape": shape, "data": flat}
-
-# @router.put("/{draft_id}/mask/array")
-# def put_mask_array(draft_id: str, payload: MaskPayload, item: str | None = None):
-#     meta = _load_meta(draft_id)
-#     it = _get_item(meta, item)
-#     mask_path = _ensure_mask(meta, it)
-
-#     shape = tuple(payload.shape)
-#     arr = np.array(payload.data, dtype=np.uint8).reshape(shape)
-
-#     scan_img = nib.load(it["path"])
-#     new_img = nib.Nifti1Image(arr, scan_img.affine, scan_img.header)
-#     nib.save(new_img, str(mask_path))
-
-#     return {"message": "Mask saved", "mask_path": str(mask_path)}
 
 @router.post("/{draft_id}/segment")
 def segment_one(draft_id: str, item: str | None = Query(None)):
