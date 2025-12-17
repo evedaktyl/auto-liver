@@ -3,6 +3,8 @@ from fastapi.responses import JSONResponse
 from pathlib import Path
 from datetime import datetime
 import shutil, uuid, json
+import nibabel as nib
+import numpy as np
 
 WORKSPACE_DIR = Path("workspace")
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
@@ -44,13 +46,21 @@ async def upload_scan(
         dest = unique_dest(draft_dir, f.filename)
         with dest.open("wb") as out:
             shutil.copyfileobj(f.file, out)
+        
+        scan = nib.load(str(dest.resolve()))
+        mask = np.zeros(scan.shape, dtype=np.uint8)
+        mask_img = nib.Nifti1Image(mask, scan.affine, scan.header)
+
+        stem = dest.stem.replace('.nii.gz', '')
+        mask_path = draft_dir / f"{stem}_mask.nii.gz"
+        nib.save(mask_img, str(mask_path))
         items.append({
             "item_id": f"I{i+1:03d}",
             "path": str(dest.resolve()),
             "original_filename": Path(f.filename).name,
             "stored_filename": dest.name,
             "segmented": False,
-            "mask_path": None,
+            "mask_path": str(mask_path),
         })
 
     meta = {

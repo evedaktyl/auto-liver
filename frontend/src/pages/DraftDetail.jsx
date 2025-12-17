@@ -18,20 +18,24 @@ export default function DraftDetail() {
   const [shape, setShape] = useState(null);
   const [idx, setIdx] = useState({ axial: 0, coronal: 0, sagittal: 0 }); // Slider values
 
+  const cacheScan = useRef(new Map());
+  const cacheScanSlice = useRef(new Map());
+  const cacheMask = useRef(new Map());
+  const cacheMaskSlice = useRef(new Map());
+  const cacheEditedMask = useRef(new Map());
+  
+
   const [imgBlobs, setImgBlobs] = useState({ axial: null, coronal: null, sagittal: null });
   const [maskBlobs, setMaskBlobs] = useState({ axial: null, coronal: null, sagittal: null });
   const [showMask, setShowMask] = useState(true);
   const [maskOpacity, setMaskOpacity] = useState(0.35);
-
-  const cacheImg = useRef(new Map());
-  const cacheMask = useRef(new Map());
-  const cacheScan = useRef(new Map());
 
   // Brush tool
   const [editMode, setEditMode] = useState(false);
   const [brushMode, setBrushMode] = useState("brush"); 
   const [brushSize, setBrushSize] = useState(8);
   const brushRef = useRef(null);
+  const [axialSize, setAxialSize] = useState({w: 0, h: 0});
   const maskRef = useRef(null);
   const [isEdited, setIsEdited] = useState(false);
 
@@ -56,7 +60,7 @@ export default function DraftDetail() {
     if (!selectedItem) return;
 
     const key = `${draftId}:${selectedItem}`;
-    if (cacheScan.current.has(key)) {
+    if (cacheScan.current.has(key) && cacheMask.current.has(key)) {
       const { shape } = cacheScan.current.get(key);
       setShape(shape);
       setIdx({
@@ -67,9 +71,9 @@ export default function DraftDetail() {
       return;
     }
 
-    setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
     (async () => {
-      const r = await fetch(`${API}/drafts/${draftId}/scan-full?item=${selectedItem}`);
+      setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
+      const r = await fetch(`${API}/drafts/${draftId}/scan?item=${selectedItem}`);
       if (!r.ok) return;
 
       const raw = new Uint8Array(await r.arrayBuffer());
@@ -77,16 +81,23 @@ export default function DraftDetail() {
       const [X, Y, Z] = header;
       const shape = [X, Y, Z];
       setShape(shape);
+
+      const volume = new Float32Array(inflate(raw.subarray(12)).buffer);
+      cacheScan.current.set(key, { shape, volume });
+
+      // Load mask
+      const m = await fetch(`${API}/drafts/${draftId}/mask?item=${selectedItem}`);
+      if (!m.ok) return;
+
+      const mask = new Float32Array(inflate(new Uint8Array(await m.arrayBuffer()).subarray(12)).buffer);
+      cacheMask.current.set(key, mask);
       setIdx({
         axial: Math.floor(Z / 2),
         coronal: Math.floor(Y / 2),
         sagittal: Math.floor(X / 2),
       });
-
-      const volume = new Float32Array(inflate(raw.subarray(12)).buffer);
-      cacheScan.current.set(key, { shape, volume });
+      setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
     })();
-    setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
   }, [selectedItem]);
 
   // Load slices
@@ -95,7 +106,8 @@ export default function DraftDetail() {
 
     const key = `${draftId}:${selectedItem}`;
     const scan = cacheScan.current.get(key);
-    if (!scan) return;
+    const mask = cacheMask.current.get(key);
+    if (!scan || !mask) return;
 
     const { shape, volume } = scan;
     const [X, Y, Z] = shape;
@@ -103,33 +115,42 @@ export default function DraftDetail() {
     const loadSlice = async (plane, index) => {
       const sliceKey = `${selectedItem}:${plane}:${index}`;
 
-      if (cacheImg.current.has(sliceKey)) {
-        setImgBlobs(s => ({ ...s, [plane]: cacheImg.current.get(sliceKey) }));
-        return;
+      // Assumes if 
+      if (cacheScanSlice.current.has(sliceKey)) {
+        setImgBlobs(s => ({ ...s, [plane]: cacheScanSlice.current.get(sliceKey) }));
+        if (cacheMaskSlice.current.has(sliceKey)) {
+          setMaskBlobs(s => ({ ...s, [plane]: cacheMaskSlice.current.get(sliceKey)}));
+          return;
+        }
       }
 
-      setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
       let slice;
-      if (plane == "axial") {
-        slice = getAxial(volume, shape, index);
-      } else if (plane == "coronal") {
-        slice = getCoronal(volume,  shape, index);
-      } else {
-        slice = getSagittal(volume, shape, index);
-      }
+      let mslice;
       const width  = plane === "axial" ? Y : Z;
       const height = plane === "axial" ? X : X; 
-
-
+      if (plane == "axial") {
+        slice = getAxial(volume, shape, index);
+        mslice = getAxial(mask, shape, index);
+        setAxialSize({ w: width, h: height });
+      } else if (plane == "coronal") {
+        slice = getCoronal(volume,  shape, index);
+        mslice = getCoronal(mask, shape, index);
+      } else {
+        slice = getSagittal(volume, shape, index);
+        mslice = getSagittal(mask, shape, index);
+      }
+      
       const blob = await floatSliceToPngBlob(slice, width, height);
-      cacheImg.current.set(sliceKey, blob);
+      const mblob = await maskSliceToPngBlob(mslice, width, height);
+      cacheScanSlice.current.set(sliceKey, blob);
+      cacheMaskSlice.current.set(sliceKey, mblob);
       setImgBlobs(s => ({ ...s, [plane]: blob }));
+      setMaskBlobs(s => ({ ...s, [plane]: mblob }));
     };
 
     loadSlice("axial", idx.axial);
     loadSlice("coronal", idx.coronal);
     loadSlice("sagittal", idx.sagittal);
-    setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
   }, [idx, selectedItem]);
 
   function getAxial(volume, [X, Y, Z], z) {
@@ -138,7 +159,6 @@ export default function DraftDetail() {
     for (let x = 0; x < X; x++)
       for (let y = 0; y < Y; y++)
         out[k++] = volume[(x * Y + y) * Z + z];
-    console.log(volume);
     return out;
   }
 
@@ -160,8 +180,21 @@ export default function DraftDetail() {
     return out;
   }
 
+  function rotateSlice(slice, width, height) {
+    const out = new Float32Array(width * height);
+
+    let k = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const oldIndex = x + (height - 1 - y) * width;
+        out[k++] = slice[oldIndex];
+      }
+    }
+    return out;
+  }
+
   function floatSliceToPngBlob(slice, width, height) {
-    // Normalize slice to [0, 255]
+    // normalize slice to [0, 255]
     const arr = new Uint8ClampedArray(width * height);
     let min = Infinity, max = -Infinity;
 
@@ -176,7 +209,7 @@ export default function DraftDetail() {
       arr[i] = ((slice[i] - min) / range) * 255;
     }
 
-    // Convert grayscale to ImageData
+    // convert grayscale to ImageData
     const rgba = new Uint8ClampedArray(width * height * 4);
     for (let i = 0; i < arr.length; i++) {
       const v = arr[i];
@@ -198,19 +231,50 @@ export default function DraftDetail() {
     });
   }
 
-  const fetchMaskSlice = async (plane, index) => {
-    const key = `${selectedItem}:${plane}:${index}`;
-    if (cacheMask.current.has(key)) {
-      setMaskBlobs((s) => ({ ...s, [plane]: cacheMask.current.get(key) }));
-      return;
+  function maskSliceToPngBlob(slice, width, height) {
+    // normalize slice to [0, 255]
+    const arr = new Uint8ClampedArray(width * height);
+    let min = Infinity, max = -Infinity;
+
+    for (let i = 0; i < slice.length; i++) {
+      const v = slice[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
     }
-    const url = `${API}/drafts/${draftId}/mask/slice.png?item=${selectedItem}&plane=${plane}&index=${index}&alpha=1`;
-    const r = await fetch(url);
-    if (!r.ok) { setMaskBlobs((s) => ({ ...s, [plane]: null })); return; }
-    const b = await r.blob();
-    cacheMask.current.set(key, b);
-    setMaskBlobs((s) => ({ ...s, [plane]: b }));
-  };
+    const range = max - min || 1;
+
+    for (let i = 0; i < slice.length; i++) {
+      arr[i] = ((slice[i] - min) / range) * 255;
+    }
+
+    // convert grayscale to ImageData
+    const rgba = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < arr.length; i++) {
+      const v = arr[i];
+      if (v == 0) {
+        rgba[i * 4 + 0] = 0;
+        rgba[i * 4 + 1] = 0;
+        rgba[i * 4 + 2] = 0;
+        rgba[i * 4 + 3] = 0;
+      } else {
+        rgba[i * 4 + 0] = 255;
+        rgba[i * 4 + 1] = 0;
+        rgba[i * 4 + 2] = 0;
+        rgba[i * 4 + 3] = 255;
+      }
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    const imgData = new ImageData(rgba, width, height);
+    ctx.putImageData(imgData, 0, 0);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/png");
+    });
+  }
 
   const onSlide = (plane) => async (e) => {
     const v = Number(e.target.value);
@@ -260,32 +324,41 @@ export default function DraftDetail() {
     }
   }
 
-  const segmentOne = async () => {
+  const segment = async () => {
     if (!selectedItem) return;
-    // setIsLoading(true);
+
+    const key = `${draftId}:${selectedItem}`;
     setIsLoading(prev => ({ ...prev, [selectedItem]: true }));
+
+    // run segmentation
     await fetch(`${API}/drafts/${draftId}/segment?item=${selectedItem}`, { method: "POST" });
-    // refresh current mask slices
-    await clearEdits();
-    await fetchMaskSlice("axial", idx.axial);
-    await fetchMaskSlice("coronal", idx.coronal);
-    await fetchMaskSlice("sagittal", idx.sagittal);
     
+    // fetch TotalSegmentator mask output
+    const m = await fetch(`${API}/drafts/${draftId}/mask?item=${selectedItem}`);
+    const raw = new Uint8Array(await m.arrayBuffer());
+    const newMask = new Float32Array(inflate(raw.subarray(12)).buffer);
+
+    // replace cached mask
+    cacheMask.current.set(key, newMask);
+    for (const sliceKey of cacheMaskSlice.current.keys()) {
+      if (sliceKey.startsWith(`${selectedItem}:`)) {
+        cacheMaskSlice.current.delete(sliceKey);
+      }
+    }
+
+    setIdx(idx => ({ ...idx }));
     setIsLoading(prev => ({ ...prev, [selectedItem]: false }));
-    const r = await fetch(`${API}/drafts/${draftId}`);
-    if (!r.ok) return;
-    const m = await r.json();
-    setMeta(m);
   };
 
   const clearEdits = async () => {
-    // Clear cached mask slices of this item
-    for (const key of cacheMask.current.keys()) {
-      if (key.split(":")[0].includes(`${selectedItem}`)) {
-        cacheMask.current.delete(key);
+    // clear cached mask slices of this item
+    for (const sliceKey of cacheMaskSlice.current.keys()) {
+      if (sliceKey.startsWith(`${selectedItem}:`)) {
+        cacheMaskSlice.current.delete(sliceKey);
       }
     }
-    await fetchMaskSlice("axial", idx.axial);
+    
+    setIdx(idx => ({ ...idx }));
     setIsEdited(false);
   }
 
@@ -381,7 +454,8 @@ export default function DraftDetail() {
                   ref={brushRef}
                   onUpdate={(blob) => {
                     const key = `${selectedItem}:axial:${idx.axial}`;
-                    cacheMask.current.set(key, blob);
+                    console.log(blob);
+                    cacheMaskSlice.current.set(key, blob);
                     setMaskBlobs((s) => ({ ...s, axial: blob }));
                     setIsEdited(true);
                   }}
@@ -414,7 +488,7 @@ export default function DraftDetail() {
           {/* Mask controls */}
           <div className="col-span-5 mt-2 flex items-center gap-4">
             <button
-              onClick={segmentOne}
+              onClick={segment}
               disabled={isLoading[selectedItem]}
               className="px-3 py-2 rounded text-[#080808] bg-[#5f9ea0] hover:bg-[#8cd3d5] disabled:bg-background-200 disabled:text-gray-500"
             >
