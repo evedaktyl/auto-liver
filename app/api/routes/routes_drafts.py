@@ -1,10 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File
-from fastapi.responses import StreamingResponse, Response
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 from pathlib import Path
-import json, io
+import json
 import nibabel as nib
 import numpy as np
-from PIL import Image
 import zlib
 
 from app.services.file_handler import delete_draft
@@ -14,7 +13,7 @@ from app.api.routes.routes_uploads import clean_stem
 
 WORKSPACE_DIR = Path("workspace")
 router = APIRouter(prefix="/drafts", tags=["Drafts"])
-    
+
 def _meta_path(draft_id: str) -> Path:
     return WORKSPACE_DIR / draft_id / "meta.json"
 
@@ -29,20 +28,32 @@ def _save_meta(draft_id: str, meta: dict):
 
 def _get_item(meta: dict, item_id: str | None) -> dict:
     items = meta.get("items") or []
-    if not items: raise HTTPException(400, "No items")
-    if item_id is None: return items[0]
+    if not items:
+        raise HTTPException(400, "No items")
+    if item_id is None:
+        return items[0]
     for it in items:
         if it["item_id"] == item_id:
             return it
     raise HTTPException(404, "Item not found")
 
+def _volume_to_payload(arr: np.ndarray) -> bytes:
+    """Convert 3D numpy array to compressed binary payload with shape header."""
+    arr = np.ascontiguousarray(arr.astype(np.float32))
+    X, Y, Z = arr.shape
+    header = np.array([X, Y, Z], dtype=np.int32).tobytes()
+    compressed = zlib.compress(arr.tobytes(order="C"), level=6)
+    return header + compressed
+
 @router.get("/")
 def list_drafts():
+    if not WORKSPACE_DIR.exists():
+        return []
     drafts = []
     for d in WORKSPACE_DIR.iterdir():
         m = d / "meta.json"
         if m.exists():
-            drafts.append(json.load(open(m)))
+            drafts.append(json.loads(m.read_text()))
     return drafts
 
 @router.get("/{draft_id}")
@@ -50,79 +61,33 @@ def get_draft(draft_id: str):
     return _load_meta(draft_id)
 
 @router.get("/{draft_id}/scan")
-def get_scan(
-    draft_id: str,
-    item: str | None = Query(None),
-):
+def get_scan(draft_id: str, item: str | None = Query(None)):
     meta = _load_meta(draft_id)
     it = _get_item(meta, item)
 
     img = nib.load(it["path"])
     arr = np.asarray(img.dataobj, dtype=np.float32)
-    arr = np.ascontiguousarray(arr)
+    payload = _volume_to_payload(arr)
 
-    X, Y, Z = arr.shape
-    header = np.array([X, Y, Z], dtype=np.int32).tobytes()
-    compressed = zlib.compress(arr.tobytes(order="C"), level=6)
-    payload = header + compressed
-
-    return Response(
-        content=payload,
-        media_type="application/octet-stream"
-    )
+    return Response(content=payload, media_type="application/octet-stream")
 
 @router.get("/{draft_id}/mask")
-def get_mask(
-    draft_id: str,
-    item: str | None = Query(None),
-):
+def get_mask(draft_id: str, item: str | None = Query(None)):
     meta = _load_meta(draft_id)
     it = _get_item(meta, item)
-    # mask_path = _ensure_mask(meta, it)
-    mask_path = it["mask_path"]
-    # if not mask_path.exists():
-    #     raise HTTPException(404, "Mask not found")
-    
-    img = nib.load(str(mask_path))
-    arr = np.asarray(img.dataobj, dtype=np.float32)
-    arr = np.ascontiguousarray(arr)
+    mask_path = it.get("mask_path")
 
-    X, Y, Z = arr.shape
-    header = np.array([X, Y, Z], dtype=np.int32).tobytes()
-    compressed = zlib.compress(arr.tobytes(order="C"), level=6)
-    payload = header + compressed
+    # If mask exists, return it
+    if mask_path and Path(mask_path).exists():
+        img = nib.load(str(mask_path))
+        arr = np.asarray(img.dataobj, dtype=np.float32)
+    else:
+        # No mask yet - return empty mask with scan's shape
+        scan_img = nib.load(it["path"])
+        arr = np.zeros(scan_img.shape, dtype=np.float32)
 
-    return Response(
-        content=payload,
-        media_type="application/octet-stream"
-    )
-
-# @router.get("/{draft_id}/mask/slice.png")
-# def mask_slice_png(
-#     draft_id: str,
-#     plane: str = Query(..., regex="^(axial|coronal|sagittal)$"),
-#     index: int = Query(..., ge=0),
-#     item: str | None = Query(None),
-#     alpha: float = Query(1.0, ge=0.0, le=1.0),
-# ):
-#     meta = _load_meta(draft_id)
-#     it = _get_item(meta, item)
-#     mask_path = _ensure_mask(meta, it)
-#     # mask_path = Path(it.get("mask_path") or "")
-#     if not mask_path.exists():
-#         raise HTTPException(404, "Mask not found")
-#     mimg = nib.load(str(mask_path))
-#     if plane == "axial":
-#         if index >= mimg.shape[2]: raise HTTPException(400, "index out of range")
-#         sl = np.rot90(np.asarray(mimg.dataobj[:, :, index]) > 0)
-#     elif plane == "coronal":
-#         if index >= mimg.shape[1]: raise HTTPException(400, "index out of range")
-#         sl = np.rot90(np.asarray(mimg.dataobj[:, index, :]) > 0)
-#     else:
-#         if index >= mimg.shape[0]: raise HTTPException(400, "index out of range")
-#         sl = np.rot90(np.asarray(mimg.dataobj[index, :, :]) > 0)
-#     png = mask_to_rgba_png_bytes(sl, color="FF0000", alpha=alpha)
-#     return StreamingResponse(io.BytesIO(png), media_type="image/png")
+    payload = _volume_to_payload(arr)
+    return Response(content=payload, media_type="application/octet-stream")
 
 @router.post("/{draft_id}/segment")
 def segment_one(draft_id: str, item: str | None = Query(None)):
@@ -155,47 +120,10 @@ def save_all(draft_id: str):
     results = []
     for it in meta.get("items") or []:
         mask = Path(it["mask_path"]) if it.get("mask_path") else None
-        # you can choose to only save segmented items, or also save raw scans
         if mask and mask.exists():
             saved = save_item_to_scans_store(Path(it["path"]), mask, it["segmented"], meta.get("scan_type", "CT"))
             results.append(saved["scan_id"])
     return {"message": "saved", "count": len(results), "scan_ids": results}
-
-# @router.put("/{draft_id}/mask/slice")
-# def put_mask_slice(
-#   draft_id: str,
-#   item: str | None = Query(None),
-#   plane: str = Query(..., regex="^(axial|coronal|sagittal)$"),
-#   index: int = Query(..., ge=0),
-#   png: UploadFile = File(...),   # image/png of the slice (red overlay not required; we use alpha/white)
-# ):
-#   meta = _load_meta(draft_id)
-#   it = _get_item(meta, item)
-#   mask_path = _ensure_mask(meta, it)
-
-#   # read PNG -> boolean slice
-#   raw = png.file.read()
-#   img = Image.open(io.BytesIO(raw)).convert("L")  # grayscale: 0..255
-#   sl = (np.array(img) > 0).astype(np.uint8)       # 1 = mask
-
-#   # un-rotate to volume orientation (we rotated +90 when serving)
-#   sl_vol = np.rot90(sl, k=3)  # inverse of rot90(...)
-
-#   mimg = nib.load(str(mask_path))
-#   vol = mimg.get_fdata().astype(np.uint8)
-
-#   if plane == "axial":
-#     if index >= vol.shape[2]: raise HTTPException(400, "index OOR")
-#     vol[:, :, index] = sl_vol
-#   elif plane == "coronal":
-#     if index >= vol.shape[1]: raise HTTPException(400, "index OOR")
-#     vol[:, index, :] = sl_vol
-#   else:
-#     if index >= vol.shape[0]: raise HTTPException(400, "index OOR")
-#     vol[index, :, :] = sl_vol
-
-#   nib.save(nib.Nifti1Image(vol, mimg.affine, mimg.header), str(mask_path))
-#   return {"message": "slice saved", "mask_path": str(mask_path)}
 
 @router.post("/{draft_id}/delete")
 def delete(draft_id: str):
