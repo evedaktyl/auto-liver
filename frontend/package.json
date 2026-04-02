@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
+    "lucide-react": "^1.7.0",
     "npyjs": "^1.0.4",
     "pako": "^2.1.0",
     "react": "^19.1.0",
