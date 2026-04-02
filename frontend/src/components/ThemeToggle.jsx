@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(
-    () => document.documentElement.classList.contains("dark")
-  );
+  const [dark, setDark] = useState(true);
 
   useEffect(() => {
     if (dark) {
@@ -18,7 +16,7 @@ export default function ThemeToggle() {
       onClick={() => setDark(!dark)}
       className={dark ? "px-3 py-1 rounded bg-background-900 text-dark-text border border-transparent hover:border-gray-50" : "px-3 py-1 rounded bg-background-50 text-text-900 border border-transparent hover:border-gray-900"}
     >
-      {dark ? "🌙 Dark" : "☀️ Light"}
+      {dark ? "☀️ Light" : "🌙 Dark"}
     </button>
   );
 }

@@ -44,13 +44,13 @@ async def upload_scan(
         dest = unique_dest(draft_dir, f.filename)
         with dest.open("wb") as out:
             shutil.copyfileobj(f.file, out)
+
         items.append({
             "item_id": f"I{i+1:03d}",
             "path": str(dest.resolve()),
             "original_filename": Path(f.filename).name,
             "stored_filename": dest.name,
             "segmented": False,
-            "mask_path": None,
         })
 
     meta = {

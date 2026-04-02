@@ -117,7 +117,16 @@ export default function MaskCanvas({
     };
   }, [blob, mode, size, editable]);
 
-  return <canvas ref={canvasRef} width={width} height={height} style={{ width: "100%", height: "100%", opacity: opacity}}
-/>
+  return <canvas
+    ref={canvasRef}
+    width={width}
+    height={height}
+    style={{
+      width: "100%",
+      height: "100%",
+      opacity: opacity,
+      cursor: editable ? (mode === "brush" ? "crosshair" : mode === "erase" ? "crosshair" : "default") : "default"
+    }}
+  />
 
 }
