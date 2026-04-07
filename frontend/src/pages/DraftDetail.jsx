@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { inflate } from "pako";
-import { MousePointer2, Pencil, Eraser, Undo2, X, Zap, Save, CheckCircle } from "lucide-react";
+import { MousePointer2, Pencil, Eraser, Undo2, X, Zap, Save } from "lucide-react";
 
 import VolumeViewer from "../components/VolumeViewer";
 import { useVolumeLoader } from "../hooks/useVolumeLoader";
