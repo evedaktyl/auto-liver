@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { inflate } from "pako";
 
-const API = "http://localhost:8000";
+// const API = "http://localhost:8000";
+const API = "https://auto-liver-backend.onrender.com";
 
 /**
  * Hook to fetch and cache scan + mask volumes.
