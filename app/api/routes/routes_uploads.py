@@ -6,10 +6,6 @@ import shutil
 import uuid
 import json
 
-# external = Path(__file__).resolve().parents[2] / "workspace"
-# internal = Path(__file__).resolve().parents[1] / "workspace"
-# WORKSPACE_DIR = external if external.exists() else internal
-# WORKSPACE_DIR = Path("workspace")
 WORKSPACE_DIR = Path(__file__).resolve().parents[2] / "workspace"
 SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample"
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)

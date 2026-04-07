@@ -26,31 +26,6 @@ export default function Upload() {
 
   const clearFiles = () => setFiles([]);
 
-  const handleSubmit = async () => {
-    if (!files.length) {
-      setStatus("Please select at least one NIfTI file.");
-      return;
-    }
-    setStatus("Uploading…");
-    const fd = new FormData();
-    files.forEach((f) => fd.append("files", f)); // key expected in backend
-    fd.append("scan_type", scanType);
-
-    try {
-      const res = await fetch(`${API}/uploads/`, {
-        method: "POST",
-        body: fd,
-      });
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      const data = await res.json();
-      setStatus("Uploaded. Redirecting…");
-      navigate(`/drafts/${data.draft_id}`);
-    } catch (err) {
-      console.error(err);
-      setStatus("Upload failed. Check server logs.");
-    }
-  };
-
   const handleUseSample = async () => {
     setStatus("Preparing demo data…");
     try {
@@ -68,6 +43,69 @@ export default function Upload() {
   return (
     <div className="min-h-screen flex flex-col items-center space-y-6 py-10">
       <h2 className="text-2xl text-text-900 dark:text-dark-text">Upload Scans</h2>
+
+      {/* Keyframe animations for the sample button */}
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.7), 0 0 60px rgba(59, 130, 246, 0.5);
+          }
+        }
+
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%) rotate(45deg);
+          }
+          100% {
+            transform: translateX(200%) rotate(45deg);
+          }
+        }
+
+        @keyframes gentle-bounce {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-4px);
+          }
+        }
+
+        .sample-button {
+          position: relative;
+          overflow: hidden;
+          animation: pulse-glow 2s ease-in-out infinite, gentle-bounce 2s ease-in-out infinite;
+          transition: transform 0.2s ease;
+        }
+
+        .sample-button::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 50%;
+          height: 200%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent
+          );
+          animation: shimmer 3s infinite;
+        }
+
+        .sample-button:hover {
+          animation: pulse-glow 1s ease-in-out infinite, gentle-bounce 1s ease-in-out infinite;
+          transform: scale(1.05);
+        }
+
+        .sample-button:active {
+          transform: scale(0.98);
+        }
+      `}</style>
+
       <div className="px-10 py-15 bg-background-50 dark:bg-background-700 rounded-xl shadow max-w-xl w-full space-y-10">
         {/* Dropzone */}
         <label
@@ -131,18 +169,26 @@ export default function Upload() {
           </select>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-between gap-3">
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="px-4 py-2 border rounded"
-          >
-            Choose Files
-          </button>
+        {/* Upload action removed for demo*/}
+
+        {/* Divider with OR */}
+        <div className="relative flex items-center justify-center my-6">
+          <div className="flex-grow border-t-2 border-dashed border-gray-300 dark:border-gray-600"></div>
+          <span className="px-4 text-sm font-medium text-gray-500 dark:text-gray-400 bg-background-50 dark:bg-background-700">
+            OR
+          </span>
+          <div className="flex-grow border-t-2 border-dashed border-gray-300 dark:border-gray-600"></div>
+        </div>
+
+        {/* Demo Section */}
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+            Try the app with sample medical scans
+          </p>
           <button
             onClick={handleUseSample}
             title="Demo mode uses sample scans"
-            className="px-4 py-2 rounded text-white bg-accent-500 dark:bg-dark-accent"
+            className="sample-button px-6 py-3 rounded-lg text-white bg-accent-500 dark:bg-dark-accent font-medium"
           >
             Use Sample Scans
           </button>
