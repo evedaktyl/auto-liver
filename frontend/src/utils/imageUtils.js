@@ -1,4 +1,24 @@
 // ─────────────────────────────────────────────────────────────────────────────
+// PNG BLOB TO ALPHA CHANNEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function pngBlobToAlpha(blob) {
+  const bmp = await createImageBitmap(blob);
+  const { width, height } = bmp;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0);
+  bmp.close();
+
+  const rgba = ctx.getImageData(0, 0, width, height).data;
+  const alpha = new Uint8Array(width * height);
+  for (let i = 0; i < alpha.length; i++) alpha[i] = rgba[i * 4 + 3];
+  return { alpha, width, height };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SLICE TO PNG BLOB CONVERSION
 // ─────────────────────────────────────────────────────────────────────────────
 

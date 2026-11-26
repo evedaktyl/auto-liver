@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { inflate } from "pako";
-import { MousePointer2, Pencil, Eraser, Undo2, X, Zap, Save } from "lucide-react";
+import { inflate, deflate } from "pako";
+import { MousePointer2, Pencil, Eraser, Undo2, X, Zap, Save, Layers, Box, RotateCcw } from "lucide-react";
 
 import VolumeViewer from "../components/VolumeViewer";
+import Mask3DView from "../components/Mask3DView";
 import { useVolumeLoader } from "../hooks/useVolumeLoader";
 import { useSliceRenderer } from "../hooks/useSliceRenderer";
 import { useEditHistory } from "../hooks/useEditHistory";
@@ -29,7 +30,7 @@ export default function DraftDetail() {
   }, [draftId]);
 
   const { volume, mask, shape, isLoading, cacheMask } = useVolumeLoader(draftId, selectedItem);
-  const { imgBlobs, maskBlobs, idx, setIdx, clearAllMaskSlices, clearMaskSlice, updateMaskSlice, cacheMaskSlice } =
+  const { imgBlobs, maskBlobs, idx, setIdx, clearAllMaskSlices, clearMaskSlice, updateMaskSlice, maskVersion } =
     useSliceRenderer(volume, mask, shape, selectedItem);
 
   const [showMask, setShowMask] = useState(true);
@@ -37,6 +38,31 @@ export default function DraftDetail() {
 
   const currentItem = meta?.items?.find(it => it.item_id === selectedItem);
   const isSegmented = currentItem?.segmented || false;
+
+  // 3D view
+  const [viewMode, setViewMode] = useState("2d");
+  const [surfaceMethod, setSurfaceMethod] = useState("marchingCubes");
+  const [smoothing, setSmoothing] = useState("taubin");
+  const [smoothIterations, setSmoothIterations] = useState(10);
+  const [meshOpacity, setMeshOpacity] = useState(1);
+  const [wireframe, setWireframe] = useState(false);
+  const view3DRef = useRef(null);
+  const is3D = viewMode === "3d" && isSegmented;
+
+  // Voxel-to-world geometry of the selected scan
+  const [geometry, setGeometry] = useState(null);
+  useEffect(() => {
+    if (!selectedItem) return;
+    let cancelled = false;
+    (async () => {
+      const r = await fetch(`${API}/drafts/${draftId}/geometry?item=${selectedItem}`);
+      if (!r.ok || cancelled) return;
+      const g = await r.json();
+      if (!cancelled) setGeometry({ ...g, itemId: selectedItem });
+    })();
+    return () => { cancelled = true; };
+  }, [draftId, selectedItem]);
+  const currentGeometry = geometry?.itemId === selectedItem ? geometry : null;
 
   const [actionLoading, setActionLoading] = useState(false);
   const loading = isLoading || actionLoading;
@@ -82,7 +108,7 @@ export default function DraftDetail() {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        if (canUndo(currentSliceKey) && isSegmented) {
+        if (canUndo(currentSliceKey) && isSegmented && !is3D) {
           handleUndo();
         }
       }
@@ -90,21 +116,40 @@ export default function DraftDetail() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentSliceKey, isSegmented, canUndo]);
+  }, [currentSliceKey, isSegmented, is3D, canUndo]);
 
+  // Upload the edited mask volume. Throws if the backend rejects it.
   const saveDraft = async () => {
-    for (let i = 0; i < shape[2]; i++) {
-      const key = `${selectedItem}:axial:${i}`;
-      if (cacheMaskSlice.current.has(key)) {
-        const form = new FormData();
-        form.append("png", cacheMaskSlice.current.get(key), "slice.png");
-        const url = `${API}/drafts/${draftId}/mask/slice?item=${selectedItem}&plane=axial&index=${i}`;
-        const r = await fetch(url, { method: "PUT", body: form });
-        if (!r.ok) {
-          console.error("save failed");
-          return;
-        }
-      }
+    // An unsegmented item has no mask on the backend to update
+    if (!isSegmented || !mask || !shape) return;
+
+    // Payload: int32 [X, Y, Z] header + zlib-compressed uint8 voxels
+    const voxels = new Uint8Array(mask.length);
+    for (let i = 0; i < mask.length; i++) voxels[i] = mask[i] > 0 ? 1 : 0;
+    const compressed = deflate(voxels);
+    const body = new Uint8Array(12 + compressed.length);
+    body.set(new Uint8Array(new Int32Array(shape).buffer), 0);
+    body.set(compressed, 12);
+
+    const url = `${API}/drafts/${draftId}/mask?item=${selectedItem}`;
+    const r = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/octet-stream" },
+      body,
+    });
+    if (!r.ok) throw new Error(`Saving the mask failed with status ${r.status}`);
+  };
+
+  const handleSaveDraft = async () => {
+    setActionLoading(true);
+    try {
+      // Let the loading overlay paint before the blocking compression starts
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await saveDraft();
+    } catch (err) {
+      console.error("SaveDraft failed:", err);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -186,31 +231,166 @@ export default function DraftDetail() {
 
         <div className="border-t pt-3 space-y-2">
           <div className="font-semibold mb-2">Display</div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showMask}
-              onChange={(e) => setShowMask(e.target.checked)}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              className={`px-2 py-1.5 border rounded text-sm flex items-center justify-center gap-1.5 ${
+                !is3D
+                  ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400"
+                  : "border border-gray-600"
+              }`}
+              onClick={() => setViewMode("2d")}
+              title="Slice views"
+            >
+              <Layers size={16} />
+              <span>2D</span>
+            </button>
+            <button
+              className={`px-2 py-1.5 border rounded text-sm flex items-center justify-center gap-1.5 ${
+                is3D
+                  ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400"
+                  : "border border-gray-600"
+              } ${!isSegmented ? "text-gray-400 opacity-50" : ""}`}
+              onClick={() => {
+                setViewMode("3d");
+                setBrushMode("view");
+              }}
               disabled={!isSegmented}
-            />
-            Show mask
-          </label>
-          <div className="space-y-1">
-            <span className="text-sm">Opacity</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={maskOpacity}
-              onChange={(e) => setMaskOpacity(Number(e.target.value))}
-              className="w-full"
-              disabled={!isSegmented || !showMask}
-            />
-            <div className="text-xs opacity-60">{Math.round(maskOpacity * 100)}%</div>
+              title={isSegmented ? "3D view of the mask" : "Segment the scan to view the mask in 3D"}
+            >
+              <Box size={16} />
+              <span>3D</span>
+            </button>
           </div>
+
+          {!is3D && (
+            <>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={showMask}
+                  onChange={(e) => setShowMask(e.target.checked)}
+                  disabled={!isSegmented}
+                />
+                Show mask
+              </label>
+              <div className="space-y-1">
+                <span className="text-sm">Opacity</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={maskOpacity}
+                  onChange={(e) => setMaskOpacity(Number(e.target.value))}
+                  className="w-full"
+                  disabled={!isSegmented || !showMask}
+                />
+                <div className="text-xs opacity-60">{Math.round(maskOpacity * 100)}%</div>
+              </div>
+            </>
+          )}
         </div>
 
+        {is3D && (
+          <div className="border-t pt-3 space-y-2">
+            <div className="font-semibold mb-2">3D View</div>
+
+            <div className="space-y-1">
+              <span className="text-sm">Surface</span>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ["voxels", "Voxels", "Exact voxel faces of the mask"],
+                  ["marchingCubes", "Marching cubes", "Surface interpolated between voxels"],
+                ].map(([value, label, title]) => (
+                  <button
+                    key={value}
+                    className={`px-2 py-1.5 border rounded text-xs ${
+                      surfaceMethod === value
+                        ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400"
+                        : "border border-gray-600"
+                    }`}
+                    onClick={() => setSurfaceMethod(value)}
+                    title={title}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-sm">Smoothing</span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ["none", "None", "No smoothing"],
+                  ["laplacian", "Laplacian", "Strong smoothing; shrinks the surface slightly"],
+                  ["taubin", "Taubin", "Smoothing that preserves volume"],
+                ].map(([value, label, title]) => (
+                  <button
+                    key={value}
+                    className={`px-0.5 py-1.5 border rounded text-[11px] ${
+                      smoothing === value
+                        ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400"
+                        : "border border-gray-600"
+                    }`}
+                    onClick={() => setSmoothing(value)}
+                    title={title}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {smoothing !== "none" && (
+              <div className="space-y-1">
+                <span className="text-sm">Iterations</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={50}
+                  value={smoothIterations}
+                  onChange={(e) => setSmoothIterations(Number(e.target.value))}
+                  className="w-full"
+                />
+                <div className="text-xs opacity-60">{smoothIterations}</div>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <span className="text-sm">Opacity</span>
+              <input
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.05}
+                value={meshOpacity}
+                onChange={(e) => setMeshOpacity(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="text-xs opacity-60">{Math.round(meshOpacity * 100)}%</div>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={wireframe}
+                onChange={(e) => setWireframe(e.target.checked)}
+              />
+              Wireframe
+            </label>
+
+            <button
+              onClick={() => view3DRef.current?.resetView()}
+              className="w-full px-2 py-1.5 border border-gray-600 hover:border-blue-400 rounded text-xs flex items-center justify-center gap-1.5"
+            >
+              <RotateCcw size={14} />
+              <span>Reset view</span>
+            </button>
+          </div>
+        )}
+
+        {!is3D && (
         <div className="border-t pt-3 space-y-2">
           <div className="font-semibold mb-2">Edit Mask</div>
 
@@ -296,6 +476,7 @@ export default function DraftDetail() {
             </button>
           </div>
         </div>
+        )}
 
         <div className="border-t pt-3 space-y-2">
           <div className="font-semibold mb-2">Actions</div>
@@ -312,7 +493,7 @@ export default function DraftDetail() {
             <span>Run TotalSegmentator</span>
           </button>
           <button
-            onClick={saveDraft}
+            onClick={handleSaveDraft}
             disabled={loading}
             className={`w-full px-2 py-1.5 border rounded text-xs flex items-center justify-center gap-1.5 ${
               loading
@@ -327,6 +508,21 @@ export default function DraftDetail() {
       </aside>
 
       <section className="flex-1 min-w-0">
+        {is3D ? (
+          <Mask3DView
+            ref={view3DRef}
+            mask={mask}
+            shape={shape}
+            geometry={currentGeometry}
+            maskVersion={maskVersion}
+            method={surfaceMethod}
+            smoothing={smoothing}
+            iterations={smoothIterations}
+            opacity={meshOpacity}
+            wireframe={wireframe}
+            isLoading={loading}
+          />
+        ) : (
         <VolumeViewer
           imgBlobs={imgBlobs}
           maskBlobs={maskBlobs}
@@ -343,6 +539,7 @@ export default function DraftDetail() {
           onMaskUpdate={handleMaskUpdate}
           brushRef={brushRef}
         />
+        )}
       </section>
     </div>
   );

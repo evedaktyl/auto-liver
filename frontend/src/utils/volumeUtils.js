@@ -55,6 +55,31 @@ export function rotateSlice(slice, width, height) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AXIAL SLICE WRITE-BACK
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function writeAxialSlice(mask, [X, Y, Z], z, alpha) {
+  // Inverse of getAxial + rotateSlice. `alpha` is the alpha channel of the displayed
+  // axial mask image (Y rows × X columns): pixel (row r, col c) is voxel (x=c, y=Y-1-r)
+  for (let r = 0; r < Y; r++) {
+    const y = Y - 1 - r;
+    for (let c = 0; c < X; c++) {
+      mask[(c * Y + y) * Z + z] = alpha[r * X + c] >= 128 ? 1 : 0;
+    }
+  }
+}
+
+export function restoreAxialSlice(mask, source, [X, Y, Z], z) {
+  // Copy one axial slice from `source` (same layout as `mask`) back into `mask`
+  for (let x = 0; x < X; x++) {
+    for (let y = 0; y < Y; y++) {
+      const i = (x * Y + y) * Z + z;
+      mask[i] = source[i];
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CONVENIENCE
 // ─────────────────────────────────────────────────────────────────────────────
 
