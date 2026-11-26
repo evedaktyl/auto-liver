@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { inflate, deflate } from "pako";
 import { MousePointer2, Pencil, Eraser, Undo2, X, Zap, Save, Layers, Box, RotateCcw } from "lucide-react";
@@ -46,7 +46,7 @@ export default function DraftDetail() {
 
   const { volume, mask, shape, isLoading, cacheMask } = useVolumeLoader(draftId, selectedItem);
   const { imgBlobs, maskBlobs, idx, setIdx, clearAllMaskSlices, clearMaskSlice, updateMaskSlice, maskVersion } =
-    useSliceRenderer(volume, mask, shape, selectedItem);
+    useSliceRenderer(volume, mask, shape, selectedItem, meta?.scan_type);
 
   const [showMask, setShowMask] = useState(true);
   const [maskOpacity, setMaskOpacity] = useState(0.35);
@@ -58,9 +58,9 @@ export default function DraftDetail() {
   const [viewMode, setViewMode] = useState("2d");
   const [surfaceMethod, setSurfaceMethod] = useState("marchingCubes");
   const [smoothing, setSmoothing] = useState("taubin");
-  const [smoothIterations, setSmoothIterations] = useState(10);
-  const [meshOpacity, setMeshOpacity] = useState(0);
-  const [wireframe, setWireframe] = useState(true);
+  const [smoothIterations, setSmoothIterations] = useState(30);
+  const [meshOpacity, setMeshOpacity] = useState(1);
+  const [wireframe, setWireframe] = useState(false);
   const view3DRef = useRef(null);
 
   // Resizable sidebar
@@ -112,6 +112,17 @@ export default function DraftDetail() {
     return () => { cancelled = true; };
   }, [draftId, selectedItem]);
   const currentGeometry = geometry?.itemId === selectedItem ? geometry : null;
+
+  // Mask volume in mL: voxel count × voxel volume (mm³) / 1000
+  const maskVolumeMl = useMemo(() => {
+    if (!mask || !currentGeometry || !isSegmented) return null;
+    let voxels = 0;
+    for (let i = 0; i < mask.length; i++) if (mask[i] > 0) voxels++;
+    const [sx, sy, sz] = currentGeometry.spacing;
+    return (voxels * sx * sy * sz) / 1000;
+    // maskVersion: the mask array is edited in place
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mask, maskVersion, currentGeometry, isSegmented]);
 
   const [actionLoading, setActionLoading] = useState(false);
   const loading = isLoading || actionLoading;
@@ -283,6 +294,12 @@ export default function DraftDetail() {
 
         <div className="border-t pt-3 space-y-2">
           <div className="font-semibold mb-2">Display</div>
+          {maskVolumeMl !== null && (
+            <div className="flex items-baseline justify-between text-sm" title="Volume of the current mask, including edits">
+              <span>Liver volume</span>
+              <span className="font-semibold">{Math.round(maskVolumeMl).toLocaleString()} mL</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <button
               className={`px-2 py-1.5 border rounded text-sm flex items-center justify-center gap-1.5 ${

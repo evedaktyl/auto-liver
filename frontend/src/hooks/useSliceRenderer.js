@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { extractSlice, writeAxialSlice, restoreAxialSlice } from "../utils/volumeUtils";
-import { sliceToPngBlob, pngBlobToAlpha } from "../utils/imageUtils";
+import { sliceToPngBlob, pngBlobToAlpha, computeDisplayWindow } from "../utils/imageUtils";
 
 /**
  * Hook to extract slices from volume data and generate PNG blobs.
@@ -10,16 +10,23 @@ import { sliceToPngBlob, pngBlobToAlpha } from "../utils/imageUtils";
  * @param {Float32Array} mask - The mask volume data
  * @param {number[]} shape - Volume dimensions [X, Y, Z]
  * @param {string} itemId - Current item ID (for cache keying)
+ * @param {string} [scanType] - "CT" or "MRI"; selects the display window
  * @returns {{ maskVersion, imgBlobs, maskBlobs, idx, setIdx, clearAllMaskSlices,
  *   clearMaskSlice, updateMaskSlice, cacheMaskSlice }}
  */
-export function useSliceRenderer(volume, mask, shape, itemId) {
+export function useSliceRenderer(volume, mask, shape, itemId, scanType) {
   const [idx, setIdx] = useState({ axial: 0, coronal: 0, sagittal: 0 });
   const [imgBlobs, setImgBlobs] = useState({ axial: null, coronal: null, sagittal: null });
   const [maskBlobs, setMaskBlobs] = useState({ axial: null, coronal: null, sagittal: null });
 
   const cacheScanSlice = useRef(new Map());
   const cacheMaskSlice = useRef(new Map());
+
+  // One intensity window for the whole volume, so brightness is stable across slices
+  const displayWindow = useMemo(
+    () => (volume ? computeDisplayWindow(volume, scanType) : null),
+    [volume, scanType],
+  );
 
   // Incremented whenever the mask volume's voxels change
   const [maskVersion, setMaskVersion] = useState(0);
@@ -50,7 +57,7 @@ export function useSliceRenderer(volume, mask, shape, itemId) {
       let imgBlob = cacheScanSlice.current.get(sliceKey);
       if (!imgBlob) {
         const { slice, width, height } = extractSlice(volume, shape, plane, index);
-        imgBlob = await sliceToPngBlob(slice, width, height, "grayscale");
+        imgBlob = await sliceToPngBlob(slice, width, height, "grayscale", displayWindow);
         cacheScanSlice.current.set(sliceKey, imgBlob);
       }
 
@@ -73,7 +80,7 @@ export function useSliceRenderer(volume, mask, shape, itemId) {
     loadSlice("axial", idx.axial);
     loadSlice("coronal", idx.coronal);
     loadSlice("sagittal", idx.sagittal);
-  }, [volume, mask, shape, itemId, idx]);
+  }, [volume, mask, shape, itemId, idx, displayWindow]);
 
   // Clear all mask slices for current item (used after segmentation or "Clear All")
   const clearAllMaskSlices = useCallback(() => {
