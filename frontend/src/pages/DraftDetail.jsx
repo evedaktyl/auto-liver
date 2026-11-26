@@ -59,8 +59,8 @@ export default function DraftDetail() {
   const [surfaceMethod, setSurfaceMethod] = useState("marchingCubes");
   const [smoothing, setSmoothing] = useState("taubin");
   const [smoothIterations, setSmoothIterations] = useState(10);
-  const [meshOpacity, setMeshOpacity] = useState(1);
-  const [wireframe, setWireframe] = useState(false);
+  const [meshOpacity, setMeshOpacity] = useState(0);
+  const [wireframe, setWireframe] = useState(true);
   const view3DRef = useRef(null);
 
   // Resizable sidebar
@@ -413,7 +413,7 @@ export default function DraftDetail() {
               <span className="text-sm">Opacity</span>
               <input
                 type="range"
-                min={0.1}
+                min={0}
                 max={1}
                 step={0.05}
                 value={meshOpacity}

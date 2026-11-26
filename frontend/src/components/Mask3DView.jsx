@@ -4,6 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { cropMask } from "../utils/meshing";
 
 const MESH_COLOR = 0xd64545;
+const WIRE_COLOR = 0xff9a9a;
 const GIZMO_SIZE = 88; // px
 const REBUILD_DELAY = 150; // ms, debounces slider drags
 
@@ -47,8 +48,8 @@ function makeLabelSprite(text, color, disposables) {
  * @param {"voxels"|"marchingCubes"} method - Surface extraction algorithm
  * @param {"none"|"laplacian"|"taubin"} smoothing - Mesh smoothing algorithm
  * @param {number} iterations - Smoothing iterations
- * @param {number} opacity - Surface opacity (0-1)
- * @param {boolean} wireframe - Draw triangle edges instead of a filled surface
+ * @param {number} opacity - Surface opacity (0-1); 0 hides the surface
+ * @param {boolean} wireframe - Draw triangle edges over the surface (unaffected by opacity)
  * @param {boolean} isLoading - Show loading spinner overlay
  * @param {React.Ref} ref - Exposes `resetView()`
  */
@@ -66,7 +67,7 @@ export default function Mask3DView({
   ref,
 }) {
   const containerRef = useRef(null);
-  const viewRef = useRef(null); // { mesh, material, requestRender, frameView }
+  const viewRef = useRef(null); // { group, mesh, wireMesh, material, requestRender, frameView }
   const workerRef = useRef(null);
   const requestId = useRef(0);
   // Inputs the worker's current mask crop was built from
@@ -111,10 +112,20 @@ export default function Mask3DView({
       roughness: 0.6,
       metalness: 0.05,
       side: THREE.DoubleSide,
+      // Push the surface back slightly so the wireframe drawn over it does not flicker
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
     });
+    const wireMaterial = new THREE.MeshBasicMaterial({ color: WIRE_COLOR, wireframe: true });
+
+    // Surface and wireframe share one geometry; the group is hidden until a mesh is built
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
-    mesh.visible = false;
-    scene.add(mesh);
+    const wireMesh = new THREE.Mesh(mesh.geometry, wireMaterial);
+    const group = new THREE.Group();
+    group.add(mesh, wireMesh);
+    group.visible = false;
+    scene.add(group);
 
     const controls = new OrbitControls(camera, renderer.domElement);
 
@@ -154,7 +165,7 @@ export default function Mask3DView({
     // View the mesh from anterior, fitted to the viewport
     const frameView = () => {
       const sphere = mesh.geometry.boundingSphere;
-      if (!mesh.visible || !sphere || !(sphere.radius > 0)) return;
+      if (!group.visible || !sphere || !(sphere.radius > 0)) return;
       const vFov = THREE.MathUtils.degToRad(camera.fov);
       const fit = Math.min(vFov, 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect));
       const distance = (sphere.radius / Math.sin(fit / 2)) * 1.1;
@@ -196,7 +207,8 @@ export default function Mask3DView({
 
       mesh.geometry.dispose();
       mesh.geometry = geo;
-      mesh.visible = true;
+      wireMesh.geometry = geo;
+      group.visible = true;
 
       if (needsFrame.current) {
         needsFrame.current = false;
@@ -212,7 +224,7 @@ export default function Mask3DView({
     };
 
     workerRef.current = worker;
-    viewRef.current = { mesh, material, requestRender, frameView };
+    viewRef.current = { group, mesh, wireMesh, material, requestRender, frameView };
     // A new worker has no mask data yet
     cropState.current = { mask: null, version: -1, geometry: null, key: 0, empty: false };
     needsFrame.current = true;
@@ -226,6 +238,7 @@ export default function Mask3DView({
       controls.dispose();
       mesh.geometry.dispose();
       material.dispose();
+      wireMaterial.dispose();
       disposables.forEach((d) => d.dispose());
       renderer.dispose();
       renderer.domElement.remove();
@@ -263,7 +276,7 @@ export default function Mask3DView({
       }
 
       if (state.empty) {
-        view.mesh.visible = false;
+        view.group.visible = false;
         view.requestRender();
         setTriangles(0);
         setStatus("empty");
@@ -286,11 +299,12 @@ export default function Mask3DView({
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    const { material } = view;
+    const { material, mesh, wireMesh } = view;
     material.opacity = opacity;
     material.transparent = opacity < 1;
     material.depthWrite = opacity >= 1;
-    material.wireframe = wireframe;
+    mesh.visible = opacity > 0;
+    wireMesh.visible = wireframe;
     // Flat faces for unsmoothed voxels, smooth shading otherwise
     material.flatShading = method === "voxels" && smoothing === "none";
     material.needsUpdate = true;
