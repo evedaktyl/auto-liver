@@ -12,6 +12,21 @@ import { useEditHistory } from "../hooks/useEditHistory";
 // const API="http://localhost:8000";
 const API = "https://auto-liver-backend.onrender.com";
 
+const SIDEBAR_WIDTH_KEY = "draftSidebarWidth";
+const SIDEBAR_DEFAULT = 256;
+const SIDEBAR_MIN = 220;
+const SIDEBAR_MAX = 520;
+const clampSidebar = (w) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(w)));
+
+function loadSidebarWidth() {
+  try {
+    const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+    return stored ? clampSidebar(stored) : SIDEBAR_DEFAULT;
+  } catch {
+    return SIDEBAR_DEFAULT;
+  }
+}
+
 export default function DraftDetail() {
   const navigate = useNavigate();
   const { draftId } = useParams();
@@ -47,6 +62,40 @@ export default function DraftDetail() {
   const [meshOpacity, setMeshOpacity] = useState(1);
   const [wireframe, setWireframe] = useState(false);
   const view3DRef = useRef(null);
+
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth));
+    } catch {
+      // Storage unavailable; the width just will not persist
+    }
+  }, [sidebarWidth]);
+
+  const startSidebarResize = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    const onMove = (ev) => setSidebarWidth(clampSidebar(startWidth + ev.clientX - startX));
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const handleSidebarResizeKey = (e) => {
+    if (e.key === "ArrowLeft") setSidebarWidth((w) => clampSidebar(w - 16));
+    else if (e.key === "ArrowRight") setSidebarWidth((w) => clampSidebar(w + 16));
+    else return;
+    e.preventDefault();
+  };
   const is3D = viewMode === "3d" && isSegmented;
 
   // Voxel-to-world geometry of the selected scan
@@ -204,8 +253,11 @@ export default function DraftDetail() {
   }
 
   return (
-    <div className="p-6 flex gap-4">
-      <aside className="w-64 min-w-64 flex-shrink-0 border border-[#282828] rounded-xl p-3 space-y-4">
+    <div className="p-6 flex">
+      <aside
+        className="flex-shrink-0 border border-[#282828] rounded-xl p-3 space-y-4"
+        style={{ width: sidebarWidth }}
+      >
         <div>
           <div className="font-semibold mb-2">Scans</div>
           <ul className="space-y-1">
@@ -297,14 +349,14 @@ export default function DraftDetail() {
 
             <div className="space-y-1">
               <span className="text-sm">Surface</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {[
                   ["voxels", "Voxels", "Exact voxel faces of the mask"],
                   ["marchingCubes", "Marching cubes", "Surface interpolated between voxels"],
                 ].map(([value, label, title]) => (
                   <button
                     key={value}
-                    className={`px-2 py-1.5 border rounded text-xs ${
+                    className={`flex-1 whitespace-nowrap px-2! py-1.5! border rounded text-xs! ${
                       surfaceMethod === value
                         ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400"
                         : "border border-gray-600"
@@ -320,7 +372,7 @@ export default function DraftDetail() {
 
             <div className="space-y-1">
               <span className="text-sm">Smoothing</span>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {[
                   ["none", "None", "No smoothing"],
                   ["laplacian", "Laplacian", "Strong smoothing; shrinks the surface slightly"],
@@ -328,7 +380,7 @@ export default function DraftDetail() {
                 ].map(([value, label, title]) => (
                   <button
                     key={value}
-                    className={`px-0.5 py-1.5 border rounded text-[11px] ${
+                    className={`flex-1 whitespace-nowrap px-2! py-1.5! border rounded text-xs! ${
                       smoothing === value
                         ? "border-blue-400 bg-blue-400/5 ring-1 ring-blue-400"
                         : "border border-gray-600"
@@ -506,6 +558,23 @@ export default function DraftDetail() {
           </button>
         </div>
       </aside>
+
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        aria-valuemin={SIDEBAR_MIN}
+        aria-valuemax={SIDEBAR_MAX}
+        aria-valuenow={sidebarWidth}
+        tabIndex={0}
+        title="Drag to resize · double-click to reset"
+        onPointerDown={startSidebarResize}
+        onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT)}
+        onKeyDown={handleSidebarResizeKey}
+        className="group w-4 flex-shrink-0 flex justify-center cursor-col-resize touch-none focus:outline-none"
+      >
+        <div className="w-0.5 h-full rounded bg-transparent group-hover:bg-blue-400/60 group-focus-visible:bg-blue-400 transition-colors" />
+      </div>
 
       <section className="flex-1 min-w-0">
         {is3D ? (
