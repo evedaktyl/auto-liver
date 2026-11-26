@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from pathlib import Path
 import json
+import os
 import nibabel as nib
 import numpy as np
 import zlib
@@ -88,6 +89,62 @@ def get_mask(draft_id: str, item: str | None = Query(None)):
 
     payload = _volume_to_payload(arr)
     return Response(content=payload, media_type="application/octet-stream")
+
+@router.put("/{draft_id}/mask")
+async def put_mask(draft_id: str, request: Request, item: str | None = Query(None)):
+    """Replace the item's mask with an edited one.
+
+    Body: int32 [X, Y, Z] header followed by a zlib-compressed uint8 array (C order).
+    """
+    meta = _load_meta(draft_id)
+    it = _get_item(meta, item)
+    mask_path = it.get("mask_path")
+    if not mask_path or not Path(mask_path).exists():
+        raise HTTPException(400, "Item has no mask to update")
+    mask_path = Path(mask_path)
+
+    body = await request.body()
+    if len(body) < 12:
+        raise HTTPException(400, "Payload too short")
+    shape = tuple(int(v) for v in np.frombuffer(body[:12], dtype=np.int32))
+
+    ref = nib.load(str(mask_path))
+    if shape != tuple(ref.shape):
+        raise HTTPException(400, f"Shape {shape} does not match mask shape {tuple(ref.shape)}")
+    affine = ref.affine.copy()
+    header = ref.header.copy()
+    del ref
+
+    try:
+        data = zlib.decompress(body[12:])
+    except zlib.error:
+        raise HTTPException(400, "Payload is not valid zlib data")
+    if len(data) != int(np.prod(shape)):
+        raise HTTPException(400, "Payload size does not match shape")
+
+    arr = (np.frombuffer(data, dtype=np.uint8).reshape(shape) > 0).astype(np.uint8)
+    header.set_data_dtype(np.uint8)
+    out = nib.Nifti1Image(arr, affine, header)
+
+    # Write next to the target, then swap, so a failed write cannot corrupt the mask
+    tmp_path = mask_path.with_name(f"tmp_{mask_path.name}")
+    nib.save(out, str(tmp_path))
+    os.replace(tmp_path, mask_path)
+
+    return {"message": "ok", "voxels": int(arr.sum())}
+
+@router.get("/{draft_id}/geometry")
+def get_geometry(draft_id: str, item: str | None = Query(None)):
+    """Voxel grid geometry of the scan: shape, spacing (mm) and voxel-to-world (RAS) affine."""
+    meta = _load_meta(draft_id)
+    it = _get_item(meta, item)
+
+    img = nib.load(it["path"])
+    return {
+        "shape": [int(v) for v in img.shape[:3]],
+        "spacing": [float(v) for v in img.header.get_zooms()[:3]],
+        "affine": [[float(v) for v in row] for row in img.affine],
+    }
 
 @router.post("/{draft_id}/segment")
 def segment_one(draft_id: str, item: str | None = Query(None)):
