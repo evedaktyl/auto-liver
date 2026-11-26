@@ -4,7 +4,6 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { cropMask } from "../utils/meshing";
 
 const MESH_COLOR = 0xd64545;
-const WIRE_COLOR = 0xff9a9a;
 const GIZMO_SIZE = 88; // px
 const REBUILD_DELAY = 150; // ms, debounces slider drags
 
@@ -117,7 +116,13 @@ export default function Mask3DView({
       polygonOffsetFactor: 1,
       polygonOffsetUnits: 1,
     });
-    const wireMaterial = new THREE.MeshBasicMaterial({ color: WIRE_COLOR, wireframe: true });
+    const wireMaterial = new THREE.MeshStandardMaterial({
+      color: MESH_COLOR,
+      roughness: 0.6,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+      wireframe: true,
+    });
 
     // Surface and wireframe share one geometry; the group is hidden until a mesh is built
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
